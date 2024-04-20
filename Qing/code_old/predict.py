@@ -106,27 +106,30 @@ def main(args):
         keywords = [stop_str]
         streamer = TextStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
 
-        # with torch.inference_mode():
-        #     output_ids = model(
-        #         input_ids,
-        #         images=image_tensor,
-        #         image_sizes=[image_size],
-        #         do_sample=True if args.temperature > 0 else False,
-        #         temperature=args.temperature,
-        #         max_new_tokens=args.max_new_tokens,
-        #         streamer=streamer,
-        #         use_cache=True)
-
         with torch.inference_mode():
-            model_outputs = model(
+            output_ids = model.generate(
                 input_ids,
                 images=image_tensor,
                 image_sizes=[image_size],
-                output_hidden_states=True,
-                output_attentions=True)
+                do_sample=True if args.temperature > 0 else False,
+                temperature=args.temperature,
+                max_new_tokens=args.max_new_tokens,
+                streamer=streamer,
+                num_return_sequences=5,
+                use_cache=True)
 
-        # outputs = tokenizer.decode(output_ids[0]).strip()
-        outputs = model_outputs
+        # with torch.inference_mode():
+        #     model_outputs = model.generate(
+        #         input_ids,
+        #         images=image_tensor,
+        #         image_sizes=[image_size],
+        #         output_hidden_states=True,
+        #         streamer=streamer,
+        #         num_return_sequences=5,
+        #         output_attentions=True)
+
+        outputs = tokenizer.decode(output_ids[0]).strip()
+        # outputs = model_outputs
         conv.messages[-1][-1] = outputs
 
         if args.debug:
@@ -135,9 +138,11 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model-path", type=str, default="liuhaotian/llava-v1.6-vicuna-7b")
+    parser.add_argument("--model-path", type=str, default="liuhaotian/llava-v1.5-7b")
     parser.add_argument("--model-base", type=str, default=None)
-    parser.add_argument("--image-file", type=str, default="https://llava-vl.github.io/static/images/view.jpg") #
+    # parser.add_argument("--image-file", type=str, default="https://llava-vl.github.io/static/images/view.jpg") #
+    parser.add_argument("--image-file", type=str, default="data/val2014/COCO_val2014_000000007320.jpg")
+    # parser.add_argument("--image-file", type=str, default="data/gqa/images/images/30.jpg")
     parser.add_argument("--image-bin", type=str, default=None) # "trans_part_both_2885_best_prompt.bin" "facts_part_both_best_2954_prompt.bin"
     parser.add_argument("--device", type=str, default="cuda")
     parser.add_argument("--conv-mode", type=str, default=None)

@@ -30,6 +30,7 @@ def get_PR_with_human_labels(preds, human_labels, pos_label=1, oneminus_pred=Fal
     # auroc = roc_auc_score(unroll_labels, unroll_preds)
     return P, R
 
+
 def print_AUC(P, R):
     print("AUC: {:.2f}".format(auc(R, P)*100))
 
@@ -39,6 +40,7 @@ def detect_hidden_states(combined_hidden_states):
         if len(v) == 0:
             return False
     return True
+
 
 def tfidf_encode(vectorizer, sent):
     tfidf_matrix = vectorizer.transform([sent])
@@ -69,7 +71,7 @@ def tfidf_encode(vectorizer, sent):
     return token_weights
 
 
-def extract_info_from_answers(file_path, use_tfidf_weight=False, use_attention_weight=False):
+def extract_info_from_answers(file_path, data_flag, use_tfidf_weight=False, use_attention_weight=False):
 
     with open(file_path, "rb") as f:
         responses = pickle.load(f)
@@ -90,13 +92,18 @@ def extract_info_from_answers(file_path, use_tfidf_weight=False, use_attention_w
     attention_weight_scores = {}
     new_vectorizer = joblib.load('Qing/tfidf_model.joblib')
 
-    with open('result/gqa/gqa_val.json', 'r') as f:
+    if data_flag == "gqa":
+        filter_file = "result/gqa/gqa_val.json"
+    elif data_flag == "pope":
+        filter_file = "result/coco2014_val/pope_val.json"
+
+    with open(filter_file, 'r') as f:
         keys_val = json.load(f)
 
     for idx, response in responses.items():
 
-        # if idx not in keys_val:
-        #     continue
+        if idx not in keys_val:
+            continue
 
         question_id = response["question_id"]
         log_probs = response["logprobs"]
@@ -160,10 +167,10 @@ def extract_info_from_answers(file_path, use_tfidf_weight=False, use_attention_w
 
 
             # if label in ['ACCURATE', 'INACCURATE']:
-            average_logprob = np.mean(sentence_log_probs)
-            lowest_logprob = np.min(sentence_log_probs)  # sentence_log_probs[0]   #
-            average_entropy = np.mean(sentence_entropies)
-            highest_entropy = np.max(sentence_entropies)  # sentence_entropies[0]   #
+            average_logprob = sentence_log_probs[0]      #  np.mean(sentence_log_probs)
+            lowest_logprob = sentence_log_probs[0]       # np.min(sentence_log_probs)
+            average_entropy = sentence_entropies[0]           # np.mean(sentence_entropies)
+            highest_entropy = sentence_entropies[0]               # np.max(sentence_entropies)
 
             average_logprob_sent_level[i] = average_logprob
             lowest_logprob_sent_level[i] = lowest_logprob
@@ -225,10 +232,6 @@ def form_dataframe_from_extract_info(average_logprob_scores, lowest_logprob_scor
     token_and_logprobs_pd = []
     labels_pd = []
     idxs_pd = []
-    logprob_response_pd = []
-    entropy_response_pd = []
-    label_True_response_pd = []
-    label_False_response_pd = []
     tfidf_weight_pd = []
     attention_weight_pd = []
 
@@ -271,19 +274,19 @@ def form_dataframe_from_extract_info(average_logprob_scores, lowest_logprob_scor
 
 
 def analysis_sentence_level_info(average_logprob_scores, average_entropy_scores, lowest_logprob_scores, highest_entropy_scores
-                                 , human_label_detect_True, average_logprob_flag, average_entropy_flag, lowest_logprob_flag, highest_entropy_flag, save_path, name):
+                                 , human_label, average_logprob_flag, average_entropy_flag, lowest_logprob_flag, highest_entropy_flag, save_path, name, with_role):
     # True
     # uncertainty
     Pb_average_logprob, Rb_average_logprob = get_PR_with_human_labels(average_logprob_scores,
-                                                                      human_label_detect_True, pos_label=1,
+                                                                      human_label, pos_label=1,
                                                                       oneminus_pred=average_logprob_flag)
     Pb_average_entropy, Rb_average_entropy = get_PR_with_human_labels(average_entropy_scores,
-                                                                      human_label_detect_True, pos_label=1,
+                                                                      human_label, pos_label=1,
                                                                       oneminus_pred=average_entropy_flag)
-    Pb_lowest_logprob, Rb_lowest_logprob = get_PR_with_human_labels(lowest_logprob_scores, human_label_detect_True,
+    Pb_lowest_logprob, Rb_lowest_logprob = get_PR_with_human_labels(lowest_logprob_scores, human_label,
                                                                     pos_label=1, oneminus_pred=lowest_logprob_flag)
     Pb_highest_entropy, Rb_highest_entropy = get_PR_with_human_labels(highest_entropy_scores,
-                                                                      human_label_detect_True, pos_label=1,
+                                                                      human_label, pos_label=1,
                                                                       oneminus_pred=highest_entropy_flag)
 
     print("-----------------------")
@@ -299,7 +302,7 @@ def analysis_sentence_level_info(average_logprob_scores, average_entropy_scores,
     print("Baseline4: Max(H)")
     print_AUC(Pb_highest_entropy, Rb_highest_entropy)
 
-    random_baseline = np.mean(human_label_detect_True)
+    random_baseline = np.mean(human_label)
 
     # with human label, Detecting Non-factual*
     if average_logprob_flag == True and average_entropy_flag == False and lowest_logprob_flag == True and highest_entropy_flag == False:
@@ -318,42 +321,65 @@ def analysis_sentence_level_info(average_logprob_scores, average_entropy_scores,
     plt.hlines(y=random_baseline, xmin=0, xmax=1.0, color='grey', linestyles='dotted', label='Random')
     plt.plot(Rb_average_logprob, Pb_average_logprob, '-', label=label_average_logprob)
     plt.plot(Rb_average_entropy, Pb_average_entropy, '-', label=label_average_entropy)
-    plt.plot(Rb_lowest_logprob, Pb_lowest_logprob, '-', label=label_lowest_logprob)
-    plt.plot(Rb_highest_entropy, Pb_highest_entropy, '-', label=label_highest_logprob)
+    # plt.plot(Rb_lowest_logprob, Pb_lowest_logprob, '-', label=label_lowest_logprob)
+    # plt.plot(Rb_highest_entropy, Pb_highest_entropy, '-', label=label_highest_logprob)
     plt.legend()
     plt.ylabel("Precision")
     plt.xlabel("Recall")
+    plt.tight_layout()
     # plt.show()
 
     # save
-    save_dir = save_path + '/figures_without_roles/'  #_without_roles
+    if with_role:
+        save_dir = save_path + '/figures/'
+    else:
+        save_dir = save_path + '/figures_without_role/'
     if not os.path.isdir(save_dir):
         os.mkdir(save_dir)
     file_name = '/' + name + '.png'
     fig.savefig(save_dir + file_name, bbox_inches='tight', pad_inches=0.5)
 
 
-
 if __name__ == "__main__":
     # _mistral
-    model_version = 'llava_v16_mistral_7b'
+    with_role = True
+    clear_figure = False
+    # data_flag = "gqa"
+    data_flag = "pope"
+    split = 'popular'    # 'random', 'adversarial', popular
+    model_version = 'llava_v16_mistral_7b'      #  'llava_v16_mistral_7b'
     print(model_version)
-    path = f"result/gqa/{model_version}_answer_gqa_testdev_balanced_questions_yes_no.bin"
+
+    if data_flag == "gqa":
+        if with_role:
+            path = f"result/gqa/{model_version}_answer_gqa_testdev_balanced_questions_yes_no_update_with_role.bin"
+        else:
+            path = f"result/gqa/{model_version}_answer_gqa_testdev_balanced_questions_yes_no_update_with_role.bin"
+    elif data_flag == "pope" and clear_figure:
+        if with_role:
+            path = f"result/coco2014_val/{model_version}_answer_coco_pope_{split}_extract_info_update_with_role.bin"
+        else:
+            path = f"result/coco2014_val/{model_version}_answer_coco_pope_{split}_extract_info_update_without_role.bin"
+    elif data_flag == "pope" and not clear_figure:
+        if with_role:
+            path = f"result/coco2014_val/{model_version}_answer_coco_pope_{split}_extract_info_update_no_clear_with_role.bin"
+        else:
+            path = f"result/coco2014_val/{model_version}_answer_coco_pope_{split}_extract_info_update_no_clear_without_role.bin"
 
 
     (average_logprob_scores, lowest_logprob_scores, average_entropy_scores, highest_entropy_scores, human_label_detect_True
      , human_label_detect_False, sentences_info, images_info, sentences_idx_info, token_and_logprobs_info, labels_info, idx_info
-     , tfidf_weight_scores, attention_weight_scores) = extract_info_from_answers(path)
+     , tfidf_weight_scores, attention_weight_scores) = extract_info_from_answers(path, data_flag)
 
     df = form_dataframe_from_extract_info(average_logprob_scores, lowest_logprob_scores, average_entropy_scores, highest_entropy_scores, human_label_detect_True, human_label_detect_False, sentences_info, images_info
                                           , sentences_idx_info, token_and_logprobs_info, labels_info, idx_info, tfidf_weight_scores, attention_weight_scores)
 
-
-
-    df.to_csv(f"result/gqa/{model_version}_gqa_df.csv")
+    # 存储数据
+    # df.to_csv(f"result/gqa/{model_version}_gqa_df.csv")
 
     # 读取数据
-    df = pd.read_csv(f"result/gqa/{model_version}_gqa_df.csv")
+    # df = pd.read_csv(f"result/gqa/{model_version}_gqa_df.csv")
+
     average_logprob_scores = df['average_logprob'].tolist()
     lowest_logprob_scores = df['lowest_logprob'].tolist()
     average_entropy_scores = df['average_entropy'].tolist()
@@ -375,11 +401,16 @@ if __name__ == "__main__":
     average_entropy_flag = False  # True
     lowest_logprob_flag = True  # False
     highest_entropy_flag = False  # True
-    save_path = 'result/gqa'
-    name = f'{model_version}_gqa_false'
+    if data_flag == "gqa":
+        save_path = 'result/gqa'
+        name = f'{model_version}_gqa_false'
+    elif data_flag == "pope":
+        save_path = 'result/coco2014_val'
+        name = f'{model_version}_coco2014_{split}_false'
+
     analysis_sentence_level_info(average_logprob_scores, average_entropy_scores, lowest_logprob_scores,
                                  highest_entropy_scores, human_label_detect_False, average_logprob_flag,
-                                 average_entropy_flag, lowest_logprob_flag, highest_entropy_flag, save_path, name)
+                                 average_entropy_flag, lowest_logprob_flag, highest_entropy_flag, save_path, name, with_role)
 
     # True
     print("True:")
@@ -387,11 +418,15 @@ if __name__ == "__main__":
     average_entropy_flag = True
     lowest_logprob_flag = False
     highest_entropy_flag = True
-    save_path = 'result/gqa'
-    name = f'{model_version}_gqa_true'
+    if data_flag == "gqa":
+        save_path = 'result/gqa'
+        name = f'{model_version}_gqa_true'
+    elif data_flag == "pope":
+        save_path = 'result/coco2014_val'
+        name = f'{model_version}_coco2014_{split}_true'
     analysis_sentence_level_info(average_logprob_scores, average_entropy_scores, lowest_logprob_scores,
                                  highest_entropy_scores, human_label_detect_True, average_logprob_flag,
-                                 average_entropy_flag, lowest_logprob_flag, highest_entropy_flag, save_path, name)
+                                 average_entropy_flag, lowest_logprob_flag, highest_entropy_flag, save_path, name, with_role)
 
 
 

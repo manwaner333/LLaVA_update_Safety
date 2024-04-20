@@ -11,7 +11,7 @@ answers_file = f'result/self_data/{model_version}_answer_self_check_pope_adversa
 with open(mul_path, "rb") as f_mul:
     responses_mul = pickle.load(f_mul)
 
-selfcheck_ngram = SelfCheckNgram(n=2)  # n=1 means Unigram, n=2 means Bigram, etc.
+selfcheck_ngram = SelfCheckNgram(n=1)  # n=1 means Unigram, n=2 means Bigram, etc.
 
 
 sent_scores_ngrams = {}

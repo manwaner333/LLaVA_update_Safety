@@ -25,6 +25,7 @@ output
 *.png
 data/*
 result/*
+Qing/data_old/*
 checkpoints
 ckpts*
 
@@ -36,3 +37,6 @@ ckpts*
 
 # Demo
 serve_images/
+Qing/code_old/*
+Qing/data/*
+Qing/data_clear_figure/*
