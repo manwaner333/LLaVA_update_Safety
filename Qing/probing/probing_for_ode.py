@@ -79,6 +79,10 @@ def get_val_data_loaders(dataset, model_name, feature_key, batch_size=64, shuffl
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
     return val_loader
 
+def get_test_data_loaders(dataset, model_name, feature_key, batch_size=64, shuffle=True):
+    test_dataset = MMDetect(dataset, model=model_name, split="test", feature_key=feature_key)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+    return test_loader
 
 
 class Probe(nn.Module):
@@ -100,7 +104,7 @@ class Probe(nn.Module):
         return self.sigmoid(x)
 
 
-def train(model, criterion, optimizer, train_loader, test_loader, num_epochs, device):
+def train(model, criterion, optimizer, train_loader, test_loader, val_loader, num_epochs, device):
     model.train()
     best_accuracy, best_precision, best_recall, best_f1, best_pr_auc = 0, 0, 0, 0, 0
 
@@ -116,12 +120,10 @@ def train(model, criterion, optimizer, train_loader, test_loader, num_epochs, de
             optimizer.step()
             running_loss += loss.item()
         print(f"Epoch {epoch + 1}/{num_epochs}, Loss: {running_loss / len(train_loader)}")
+        print("Test:")
         accuracy, precision, recall, f1, pr_auc, all_outputs_prob, all_labels = evaluate(model, test_loader, device)
-
-        if f1 > best_f1:
-            best_accuracy, best_precision, best_recall, best_f1, best_pr_auc, all_outputs_prob, all_labels = accuracy, precision, recall, f1, pr_auc, all_outputs_prob, all_labels
-
-    print("Final Res: ", best_accuracy, best_precision, best_recall, best_f1, best_pr_auc)
+        print("Val:")
+        accuracy_val, precision_val, recall_val, f1_val, pr_auc_val, all_outputs_prob_val, all_labels_val = evaluate(model, val_loader, device)
 
 
 def evaluate(model, test_loader, device):
@@ -184,6 +186,8 @@ if __name__ == "__main__":
     val_loader = get_val_data_loaders(args.dataset, model_name=args.model, feature_key=args.feature_key,
                                           batch_size=args.bs)
 
+    test_loader = get_test_data_loaders(args.dataset, model_name=args.model, feature_key=args.feature_key,
+                                      batch_size=args.bs)
 
     # test_dataset = 'self_data'
     # test_model = 'llava16_7b'
@@ -197,6 +201,6 @@ if __name__ == "__main__":
 
     # # Train the model
     num_epochs = 20
-    train(model, criterion, optimizer, train_loader, val_loader, num_epochs, device)
+    train(model, criterion, optimizer, train_loader, test_loader, val_loader, num_epochs, device)
 
 

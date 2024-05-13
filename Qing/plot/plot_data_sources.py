@@ -124,7 +124,7 @@ plt.xticks(angles[:-1], ['V1.5-7b \n Adv', 'V1.6-7b \n Adv', 'V1.6-Mis \n Adv', 
 
 # Draw ylabels
 ax.set_rlabel_position(20)
-plt.yticks([20, 40, 60, 80, 100], ["20", "40", "60", "80", '100'], color="grey", size=12, fontweight='bold')
+plt.yticks([20, 40, 60, 80, 100], ["20", "40", "60", "80", '100'], color="grey", size=12, fontweight='bold')hao
 plt.ylim(0, 100)
 
 # Plot each individual = each line of the data

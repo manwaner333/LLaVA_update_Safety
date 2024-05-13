@@ -4,7 +4,7 @@ import os
 import tqdm
 import numpy as np
 from sklearn.model_selection import train_test_split
-clear_figure = False
+clear_figure = True
 
 if clear_figure:
     pope_adv_file = "result/coco2014_val/llava_v15_7b_answer_coco_pope_adversarial_extract_info_update_with_role.bin"
@@ -54,6 +54,7 @@ else:
 
 
 
+truthful_qa_llama15 = "result/truthful_qa/answer_truthful_qa.bin"
 
 gqa_llava15 = "result/gqa/llava_v15_7b_answer_gqa_testdev_balanced_questions_yes_no_update_with_role.bin"
 gqa_llava16 = "result/gqa/llava_v16_7b_answer_gqa_testdev_balanced_questions_yes_no_update_with_role.bin"
@@ -67,6 +68,8 @@ mhal_val_llava16_moe = "result/m_hal/llava_v16_mistral_7b_answer_synthetic_val_d
 self_data_llava15_7b = "result/self_data/llava_v15_7b_answer_pope_adversarial_new_prompt_responses_denoted_update_with_role.bin"
 self_data_llava16_7b = "result/self_data/llava_v16_7b_answer_pope_adversarial_new_prompt_responses_denoted_update_with_role.bin"
 self_data_llava16_moe = "result/self_data/llava_v16_mistral_7b_answer_pope_adversarial_new_prompt_responses_denoted_update_with_role.bin"
+
+
 
 
 label_map = {
@@ -132,6 +135,11 @@ def prepare_data(data, model, split=None):
         elif model == "llava16_moe":
             file_name = mhal_val_llava16_moe
 
+    elif data == "truthful_qa":
+        if model == "llama15_7b":
+            file_name = truthful_qa_llama15
+
+
     sentence_train_file = os.path.join("Qing/data/", "_".join([data, model, "train"]) + "_sentence.bin")
     sentence_val_file = os.path.join("Qing/data/", "_".join([data, model, "val"]) + "_sentence.bin")
     question_train_file = os.path.join("Qing/data/", "_".join([data, model, "train"]) + "_question.bin")
@@ -179,6 +187,11 @@ def prepare_data(data, model, split=None):
             filter_file = 'result/self_data/self_data_train.json'
         elif split == "val":
             filter_file = 'result/self_data/self_data_val.json'
+    elif data == "truthful_qa":
+        if split == "train":
+            filter_file = 'result/truthful_qa/truthful_qa_train.json'
+        elif split == "val":
+            filter_file = 'result/truthful_qa/truthful_qa_val.json'
 
 
     with open(filter_file, 'r') as f:
