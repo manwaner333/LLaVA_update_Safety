@@ -19,18 +19,30 @@ print("device:", device)
 torch.manual_seed(42)
 
 class MMDetect(Dataset):
-    def __init__(self, dataset, model, split, feature_key):
+    def __init__(self, dataset, model, split, feature_key, oneflag):
         if feature_key == "sentence":
-            self.data = pickle.load(
-                open(os.path.join("Qing/data/", '_'.join([dataset, model, split]) + "_sentence.bin"), "rb" ))
+            if oneflag:
+                self.data = pickle.load(
+                    open(os.path.join("Qing/data/", '_'.join([dataset, model, split]) + "_sentence_one.bin"), "rb" ))
+            else:
+                self.data = pickle.load(
+                    open(os.path.join("Qing/data/", '_'.join([dataset, model, split]) + "_sentence_avg.bin"), "rb"))
         elif feature_key == "question":
-            self.data = pickle.load(
-                open(os.path.join("Qing/data/", '_'.join([dataset, model, split]) + "_question.bin"), "rb"))
+            if oneflag:
+                self.data = pickle.load(
+                    open(os.path.join("Qing/data/", '_'.join([dataset, model, split]) + "_question_one.bin"), "rb"))
+            else:
+                self.data = pickle.load(
+                    open(os.path.join("Qing/data/", '_'.join([dataset, model, split]) + "_question_avg.bin"), "rb"))
         elif feature_key == "response":
-            self.data = pickle.load(
-                open(os.path.join("Qing/data/", '_'.join([dataset, model, split]) + "_response.bin"), "rb"))
+            if oneflag:
+                self.data = pickle.load(
+                    open(os.path.join("Qing/data/", '_'.join([dataset, model, split]) + "_response_one.bin"), "rb"))
+            else:
+                self.data = pickle.load(
+                    open(os.path.join("Qing/data/", '_'.join([dataset, model, split]) + "_response_avg.bin"), "rb"))
+
         print(len(self.data))
-        qingli = 3
     def __len__(self):
         return len(self.data)
 
@@ -69,18 +81,18 @@ class MMDetect_Train(Dataset):
         label = torch.tensor(label, dtype=torch.float32)
         return features, label
 
-def get_train_data_loaders(dataset, model_name, feature_key, batch_size=64, shuffle=True):
-    train_dataset = MMDetect(dataset, model=model_name, split="train", feature_key=feature_key)
+def get_train_data_loaders(dataset, model_name, feature_key, batch_size=64, shuffle=True, oneflag=True):
+    train_dataset = MMDetect(dataset, model=model_name, split="train", feature_key=feature_key, oneflag=oneflag)
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle)
     return train_loader
 
-def get_val_data_loaders(dataset, model_name, feature_key, batch_size=64, shuffle=True):
-    val_dataset = MMDetect(dataset, model=model_name, split="val", feature_key=feature_key)
+def get_val_data_loaders(dataset, model_name, feature_key, batch_size=64, shuffle=True, oneflag=True):
+    val_dataset = MMDetect(dataset, model=model_name, split="val", feature_key=feature_key, oneflag=oneflag)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
     return val_loader
 
-def get_test_data_loaders(dataset, model_name, feature_key, batch_size=64, shuffle=True):
-    test_dataset = MMDetect(dataset, model=model_name, split="test", feature_key=feature_key)
+def get_test_data_loaders(dataset, model_name, feature_key, batch_size=64, shuffle=True, oneflag=True):
+    test_dataset = MMDetect(dataset, model=model_name, split="test", feature_key=feature_key, oneflag=oneflag)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
     return test_loader
 
@@ -137,6 +149,7 @@ def evaluate(model, test_loader, device):
     with torch.no_grad():
         for inputs, labels in test_loader:
             inputs, labels = inputs.to(device), labels.to(device)
+
             outputs = model(inputs)
             predicted = torch.round(outputs)
 
@@ -176,18 +189,18 @@ if __name__ == "__main__":
     parser.add_argument("--feature_key", type=str, default="response")  # response, sentence
 
     args = parser.parse_args()
-
+    oneflag = False
     train_loader = get_train_data_loaders(args.dataset, model_name=args.model, feature_key=args.feature_key,
-                                                  batch_size=args.bs)
+                                                  batch_size=args.bs, oneflag=oneflag)
     # train_dataset = 'pope_adv'
     # train_model = 'llava16_moe'
     # train_loader = get_train_data_loaders(train_dataset, model_name=train_model, feature_key="response", batch_size=args.bs)
 
     val_loader = get_val_data_loaders(args.dataset, model_name=args.model, feature_key=args.feature_key,
-                                          batch_size=args.bs)
+                                          batch_size=args.bs, oneflag=oneflag)
 
     test_loader = get_test_data_loaders(args.dataset, model_name=args.model, feature_key=args.feature_key,
-                                      batch_size=args.bs)
+                                      batch_size=args.bs, oneflag=oneflag)
 
     # test_dataset = 'self_data'
     # test_model = 'llava16_7b'

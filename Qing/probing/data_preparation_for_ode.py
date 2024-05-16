@@ -6,8 +6,8 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 import torch
 clear_figure = True
-
-truthful_qa_llama15 = "result/truthful_qa/answer_truthful_qa_300.bin"
+from sklearn.decomposition import PCA
+truthful_qa_llama15 = "result/truthful_qa/answer_truthful_qa.bin"
 
 
 label_map = {
@@ -23,16 +23,19 @@ def save_bin(file_path, content):
         pickle.dump(content, file)
 
 
-def prepare_data(data, model, split=None):
-
+def prepare_data(data, model, split, one_flag):
     if data == "truthful_qa":
         if model == "llama15_7b":
             file_name = truthful_qa_llama15
 
-
-    response_train_file = os.path.join("Qing/data/", "_".join([data, model, "train"]) + "_response.bin")
-    response_val_file = os.path.join("Qing/data/", "_".join([data, model, "val"]) + "_response.bin")
-    response_test_file = os.path.join("Qing/data/", "_".join([data, model, "test"]) + "_response.bin")
+    if one_flag:
+        response_train_file = os.path.join("Qing/data/", "_".join([data, model, "train"]) + "_response_one.bin")
+        response_val_file = os.path.join("Qing/data/", "_".join([data, model, "val"]) + "_response_one.bin")
+        response_test_file = os.path.join("Qing/data/", "_".join([data, model, "test"]) + "_response_one.bin")
+    else:
+        response_train_file = os.path.join("Qing/data/", "_".join([data, model, "train"]) + "_response_avg.bin")
+        response_val_file = os.path.join("Qing/data/", "_".join([data, model, "val"]) + "_response_avg.bin")
+        response_test_file = os.path.join("Qing/data/", "_".join([data, model, "test"]) + "_response_avg.bin")
 
 
     response_pairs = []
@@ -53,6 +56,7 @@ def prepare_data(data, model, split=None):
     for idx, content in responses.items():
 
         question_id = content["question_id"]
+        sub_hidden_states = []
         if question_id not in keys_val:
             continue
         label = content["label"]
@@ -60,8 +64,14 @@ def prepare_data(data, model, split=None):
             flag = 0
         else:
             flag = 1
-
-        hidden_states = content["hidden_states"]['answer'][-1]
+        if one_flag:
+            hidden_states = content["hidden_states"]['answer'][-1]
+        else:
+            answer_hidden_states = content["hidden_states"]['answer']
+            question_hidden_states = content["hidden_states"]['ques']
+            sub_hidden_states.extend(question_hidden_states)
+            sub_hidden_states.extend(answer_hidden_states)
+            hidden_states = np.mean(np.array(sub_hidden_states), axis=0).tolist()
         resp_pair = {"features": hidden_states, "label": flag}
         response_pairs.append(resp_pair)
 
@@ -76,10 +86,11 @@ def prepare_data(data, model, split=None):
         save_bin(response_test_file, response_pairs)
         print(len(response_pairs))
 
-
-prepare_data("truthful_qa", model="llama15_7b", split="train")
-prepare_data("truthful_qa", model="llama15_7b", split="val")
-prepare_data("truthful_qa", model="llama15_7b", split="test")
+if __name__ == '__main__':
+    oneflag = False
+    prepare_data("truthful_qa", model="llama15_7b", split="train", one_flag=oneflag)
+    prepare_data("truthful_qa", model="llama15_7b", split="val", one_flag=oneflag)
+    prepare_data("truthful_qa", model="llama15_7b", split="test", one_flag=oneflag)
 
 
 
