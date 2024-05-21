@@ -93,12 +93,12 @@ def prepare_data(data, model, split, one_flag):
         else:
             flag = 1
         if one_flag:
-            hidden_states = content["hidden_states"]['answer'][-1]
+            hidden_states = content["hidden_states"]['ques'][-1]
         else:
             question_hidden_states = content["hidden_states"]['ques']
             sub_hidden_states.extend(question_hidden_states)
             hidden_states = np.mean(np.array(sub_hidden_states), axis=0).tolist()
-        resp_pair = {"features": hidden_states, "label": flag}
+        resp_pair = {"question_id": question_id, "features": hidden_states, "label": flag}
         response_pairs.append(resp_pair)
 
 

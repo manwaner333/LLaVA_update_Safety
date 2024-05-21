@@ -50,10 +50,12 @@ class MMDetect(Dataset):
         data = self.data[idx]
         hidden_states = data["features"]
         label = data["label"]
+        question_id = data["question_id"]
 
         features = torch.tensor(hidden_states, dtype=torch.float32)
         label = torch.tensor(label, dtype=torch.float32)
-        return features, label
+        question_id = torch.tensor(question_id, dtype=torch.float32)
+        return features, label, question_id
 
 
 class MMDetect_Train(Dataset):
@@ -122,8 +124,8 @@ def train(model, criterion, optimizer, train_loader, test_loader, val_loader, nu
 
     for epoch in range(num_epochs):
         running_loss = 0.0
-        for inputs, labels in train_loader:
-            inputs, labels = inputs.to(device), labels.to(device)
+        for inputs, labels, question_ids in train_loader:
+            inputs, labels, question_ids = inputs.to(device), labels.to(device), question_ids.to(device)
             # print(labels)
             optimizer.zero_grad()
             outputs = model(inputs)
@@ -147,8 +149,8 @@ def evaluate(model, test_loader, device):
     TP, FP, FN = 0, 0, 0
 
     with torch.no_grad():
-        for inputs, labels in test_loader:
-            inputs, labels = inputs.to(device), labels.to(device)
+        for inputs, labels, question_ids in test_loader:
+            inputs, labels, question_ids = inputs.to(device), labels.to(device), question_ids.to(device)
 
             outputs = model(inputs)
             predicted = torch.round(outputs)
