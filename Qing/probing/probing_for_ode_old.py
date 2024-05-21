@@ -183,7 +183,7 @@ def evaluate(model, test_loader, device):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset", type=str, default='neg_company')   # pope_pop, mhal, self_data
+    parser.add_argument("--dataset", type=str, default='truthful_qa')   # pope_pop, mhal, self_data
     parser.add_argument("--model", type=str, default='llama15_7b')  # llava16_moe, llava15_7b, llava16_7b
     parser.add_argument("--bs", type=int, default=256)
     parser.add_argument("--feature_key", type=str, default="response")  # response, sentence
@@ -192,6 +192,9 @@ if __name__ == "__main__":
     oneflag = False
     train_loader = get_train_data_loaders(args.dataset, model_name=args.model, feature_key=args.feature_key,
                                                   batch_size=args.bs, oneflag=oneflag)
+    # train_dataset = 'pope_adv'
+    # train_model = 'llava16_moe'
+    # train_loader = get_train_data_loaders(train_dataset, model_name=train_model, feature_key="response", batch_size=args.bs)
 
     val_loader = get_val_data_loaders(args.dataset, model_name=args.model, feature_key=args.feature_key,
                                           batch_size=args.bs, oneflag=oneflag)
@@ -199,8 +202,12 @@ if __name__ == "__main__":
     test_loader = get_test_data_loaders(args.dataset, model_name=args.model, feature_key=args.feature_key,
                                       batch_size=args.bs, oneflag=oneflag)
 
+    # test_dataset = 'self_data'
+    # test_model = 'llava16_7b'
+    # test_loader = get_val_data_loaders(test_dataset, model_name=test_model, feature_key="response", batch_size=args.bs)
 
-    input_dim = 4096
+
+    input_dim = 4096  # Example dimension
     model = Probe(input_dim).to(device)
     criterion = nn.BCELoss()
     optimizer = optim.Adam(model.parameters())

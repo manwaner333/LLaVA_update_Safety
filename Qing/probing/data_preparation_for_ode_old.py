@@ -7,15 +7,7 @@ from sklearn.model_selection import train_test_split
 import torch
 clear_figure = True
 from sklearn.decomposition import PCA
-
-company_llama15 = "result/company/answer_company.bin"
-neg_company_llama15 = "result/neg_company/answer_neg_company.bin"
-fact_llama15 = "result/fact/answer_fact.bin"
-neg_fact_llama15 = "result/neg_fact/answer_neg_fact.bin"
-animal_llama15 = "result/animal/answer_animal.bin"
-city_llama15 = "result/city/answer_city.bin"
-element_llama15 = "result/element/answer_element.bin"
-invention_llama15 = "result/invention/answer_invention.bin"
+truthful_qa_llama15 = "result/truthful_qa/answer_truthful_qa.bin"
 
 
 label_map = {
@@ -32,30 +24,9 @@ def save_bin(file_path, content):
 
 
 def prepare_data(data, model, split, one_flag):
-    if data == "company":
+    if data == "truthful_qa":
         if model == "llama15_7b":
-            file_name = company_llama15
-    elif data == "neg_company":
-        if model == "llama15_7b":
-            file_name = neg_company_llama15
-    elif data == "fact":
-        if model == "llama15_7b":
-            file_name = fact_llama15
-    elif data == "neg_fact":
-        if model == "llama15_7b":
-            file_name = neg_fact_llama15
-    elif data == "animal":
-        if model == "llama15_7b":
-            file_name = animal_llama15
-    elif data == "city":
-        if model == "llama15_7b":
-            file_name = city_llama15
-    elif data == "element":
-        if model == "llama15_7b":
-            file_name = element_llama15
-    elif data == "invention":
-        if model == "llama15_7b":
-            file_name = invention_llama15
+            file_name = truthful_qa_llama15
 
     if one_flag:
         response_train_file = os.path.join("Qing/data/", "_".join([data, model, "train"]) + "_response_one.bin")
@@ -72,12 +43,13 @@ def prepare_data(data, model, split, one_flag):
     with open(file_name, 'rb') as f:
         responses = pickle.load(f)
 
-    if split == "train":
-        filter_file = 'result/' + data + '/train_question_ids.pt'
-    elif split == "val":
-        filter_file = 'result/' + data + '/val_question_ids.pt'
-    elif split == "test":
-        filter_file = 'result/' + data + '/test_question_ids.pt'
+    if data == "truthful_qa":
+        if split == "train":
+            filter_file = 'result/truthful_qa/train_question_ids.pt'
+        elif split == "val":
+            filter_file = 'result/truthful_qa/val_question_ids.pt'
+        elif split == "test":
+            filter_file = 'result/truthful_qa/test_question_ids.pt'
 
     keys_val = torch.load(filter_file).numpy()
 
@@ -88,15 +60,17 @@ def prepare_data(data, model, split, one_flag):
         if question_id not in keys_val:
             continue
         label = content["label"]
-        if label == 1:
+        if label == 'ACCURATE':
             flag = 0
         else:
             flag = 1
         if one_flag:
             hidden_states = content["hidden_states"]['answer'][-1]
         else:
+            answer_hidden_states = content["hidden_states"]['answer']
             question_hidden_states = content["hidden_states"]['ques']
             sub_hidden_states.extend(question_hidden_states)
+            sub_hidden_states.extend(answer_hidden_states)
             hidden_states = np.mean(np.array(sub_hidden_states), axis=0).tolist()
         resp_pair = {"features": hidden_states, "label": flag}
         response_pairs.append(resp_pair)
@@ -114,7 +88,6 @@ def prepare_data(data, model, split, one_flag):
 
 if __name__ == '__main__':
     oneflag = False
-    data_name = "neg_company"
-    prepare_data(data_name, model="llama15_7b", split="train", one_flag=oneflag)
-    prepare_data(data_name, model="llama15_7b", split="val", one_flag=oneflag)
-    prepare_data(data_name, model="llama15_7b", split="test", one_flag=oneflag)
+    prepare_data("truthful_qa", model="llama15_7b", split="train", one_flag=oneflag)
+    prepare_data("truthful_qa", model="llama15_7b", split="val", one_flag=oneflag)
+    prepare_data("truthful_qa", model="llama15_7b", split="test", one_flag=oneflag)
