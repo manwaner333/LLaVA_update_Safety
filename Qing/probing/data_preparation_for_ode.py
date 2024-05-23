@@ -14,6 +14,7 @@ fact_llama15 = "result/fact/answer_fact.bin"
 neg_fact_llama15 = "result/neg_fact/answer_neg_fact.bin"
 animal_llama15 = "result/animal/answer_animal.bin"
 city_llama15 = "result/city/answer_city.bin"
+neg_city_llama15 = "result/neg_city/answer_neg_city.bin"
 element_llama15 = "result/element/answer_element.bin"
 invention_llama15 = "result/invention/answer_invention.bin"
 
@@ -50,6 +51,9 @@ def prepare_data(data, model, split, one_flag):
     elif data == "city":
         if model == "llama15_7b":
             file_name = city_llama15
+    elif data == "neg_city":
+        if model == "llama15_7b":
+            file_name = neg_city_llama15
     elif data == "element":
         if model == "llama15_7b":
             file_name = element_llama15
@@ -114,7 +118,7 @@ def prepare_data(data, model, split, one_flag):
 
 if __name__ == '__main__':
     oneflag = False
-    data_name = "neg_company"
+    data_name = "neg_city"
     prepare_data(data_name, model="llama15_7b", split="train", one_flag=oneflag)
     prepare_data(data_name, model="llama15_7b", split="val", one_flag=oneflag)
     prepare_data(data_name, model="llama15_7b", split="test", one_flag=oneflag)
