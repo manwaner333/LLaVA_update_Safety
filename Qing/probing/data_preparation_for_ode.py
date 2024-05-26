@@ -17,6 +17,7 @@ city_llama15 = "result/city/answer_city.bin"
 neg_city_llama15 = "result/neg_city/answer_neg_city.bin"
 element_llama15 = "result/element/answer_element.bin"
 invention_llama15 = "result/invention/answer_invention.bin"
+ani_cap_ele_fact_inv_llama15 = "result/ani_cap_ele_fact_inv/answer_ani_cap_ele_fact_inv.bin"
 
 
 label_map = {
@@ -60,6 +61,10 @@ def prepare_data(data, model, split, one_flag):
     elif data == "invention":
         if model == "llama15_7b":
             file_name = invention_llama15
+    elif data == "ani_cap_ele_fact_inv":
+        if model == "llama15_7b":
+            file_name = ani_cap_ele_fact_inv_llama15
+
 
     if one_flag:
         response_train_file = os.path.join("Qing/data/", "_".join([data, model, "train"]) + "_response_one.bin")
