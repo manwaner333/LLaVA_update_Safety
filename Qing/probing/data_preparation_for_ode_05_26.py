@@ -118,7 +118,7 @@ def prepare_data(data, model, split, one_flag):
 
 if __name__ == '__main__':
     oneflag = False
-    train_data_name = "ani_cap_ele_fact_inv"
-    test_data_name = "neg_company"
-    prepare_data(train_data_name, model="llama15_7b", split="train", one_flag=oneflag)
-    prepare_data(test_data_name, model="llama15_7b", split="test", one_flag=oneflag)
+    data_name = "neg_city"
+    prepare_data(data_name, model="llama15_7b", split="train", one_flag=oneflag)
+    prepare_data(data_name, model="llama15_7b", split="val", one_flag=oneflag)
+    prepare_data(data_name, model="llama15_7b", split="test", one_flag=oneflag)
