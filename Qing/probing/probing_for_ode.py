@@ -185,20 +185,21 @@ def evaluate(model, test_loader, device):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset", type=str, default='neg_city')   # pope_pop, mhal, self_data
+    parser.add_argument("--train_dataset", type=str, default='ani_cap_ele_fact_inv')   # pope_pop, mhal, self_data
+    parser.add_argument("--test_dataset", type=str, default='neg_company')
     parser.add_argument("--model", type=str, default='llama15_7b')  # llava16_moe, llava15_7b, llava16_7b
     parser.add_argument("--bs", type=int, default=256)
     parser.add_argument("--feature_key", type=str, default="response")  # response, sentence
 
     args = parser.parse_args()
     oneflag = False
-    train_loader = get_train_data_loaders(args.dataset, model_name=args.model, feature_key=args.feature_key,
+    train_loader = get_train_data_loaders(args.train_dataset, model_name=args.model, feature_key=args.feature_key,
                                                   batch_size=args.bs, oneflag=oneflag)
 
     # val_loader = get_val_data_loaders(args.dataset, model_name=args.model, feature_key=args.feature_key,
     #                                       batch_size=args.bs, oneflag=oneflag)
 
-    test_loader = get_test_data_loaders(args.dataset, model_name=args.model, feature_key=args.feature_key,
+    test_loader = get_test_data_loaders(args.test_dataset, model_name=args.model, feature_key=args.feature_key,
                                       batch_size=args.bs, oneflag=oneflag)
 
 
