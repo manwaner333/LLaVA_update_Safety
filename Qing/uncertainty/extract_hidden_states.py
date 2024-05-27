@@ -92,16 +92,20 @@ def eval_model(args):
     elif data_flag == "self_data":
         filter_file = "result/self_data/self_data_val.json"
 
-    with open(filter_file, 'r') as f:
-        keys_val = json.load(f)
+    # with open(filter_file, 'r') as f:
+    #     keys_val = json.load(f)
+
+    keys_val = []
+    for i in range(500):
+        keys_val.append(i)
 
     print(f"model_flag: {model_flag}; data_flag: {data_flag}")
     image_tokens_lengths = []
     for line in tqdm(questions):
         idx = line["question_id"]
 
-        # if idx not in keys_val:
-        #     continue
+        if idx not in keys_val:
+            continue
 
         image_file = line["image"]
 
@@ -277,8 +281,15 @@ def eval_model(args):
         ques_tokens_len = i2 - i1 + 1
 
         ques_end_for_total_idx = ques_start_for_total_idx + ques_tokens_len - 1
-        ques_hidden_states = hidden_states[ques_end_for_total_idx:ques_end_for_total_idx + 1, :]
+        # ques_hidden_states = hidden_states[ques_end_for_total_idx:ques_end_for_total_idx + 1, :]
+        ques_hidden_states = hidden_states[ques_start_for_total_idx:ques_end_for_total_idx + 1, :]
         combined_hidden_states["ques"] = ques_hidden_states.detach().cpu().numpy().tolist()
+
+        # add figure information
+        figure_end_for_total_idx = ques_start_for_total_idx - 2
+        figure_hidden_state = hidden_states[figure_end_for_total_idx:figure_end_for_total_idx+1]
+        combined_hidden_states["fig"] = figure_hidden_state.detach().cpu().numpy().tolist()
+
 
         sentences_end = []
         sentences_end.append(ques_end_for_total_idx)
