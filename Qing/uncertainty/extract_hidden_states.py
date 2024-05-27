@@ -92,12 +92,12 @@ def eval_model(args):
     elif data_flag == "self_data":
         filter_file = "result/self_data/self_data_val.json"
 
-    # with open(filter_file, 'r') as f:
-    #     keys_val = json.load(f)
+    with open(filter_file, 'r') as f:
+        keys_val = json.load(f)
 
-    keys_val = []
-    for i in range(500):
-        keys_val.append(i)
+    # keys_val = []
+    # for i in range(3):
+    #     keys_val.append(i)
 
     print(f"model_flag: {model_flag}; data_flag: {data_flag}")
     image_tokens_lengths = []
