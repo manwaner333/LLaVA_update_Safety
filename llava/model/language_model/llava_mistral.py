@@ -100,7 +100,7 @@ class LlavaMistralForCausalLM(MistralForCausalLM, LlavaMetaForCausalLM):
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
             return_dict=return_dict
-        ), image_features_size
+        )    # , image_features_size
 
     @torch.no_grad()
     def generate(
@@ -122,7 +122,8 @@ class LlavaMistralForCausalLM(MistralForCausalLM, LlavaMetaForCausalLM):
                 attention_mask,
                 _,
                 inputs_embeds,
-                _
+                _,
+                image_features_size
             ) = self.prepare_inputs_labels_for_multimodal(
                 inputs,
                 position_ids,

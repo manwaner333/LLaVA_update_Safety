@@ -185,7 +185,7 @@ def evaluate(model, test_loader, device):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--train_dataset", type=str, default='ani_cap_ele_fact_inv')   # pope_pop, mhal, self_data
+    parser.add_argument("--train_dataset", type=str, default='neg_company')   # pope_pop, mhal, self_data, ani_cap_ele_fact_inv
     parser.add_argument("--test_dataset", type=str, default='neg_company')
     parser.add_argument("--model", type=str, default='llama15_7b')  # llava16_moe, llava15_7b, llava16_7b
     parser.add_argument("--bs", type=int, default=256)

@@ -58,6 +58,7 @@ def init_model(model_name: str, device: str, num_gpus: int, max_gpu_memory: int)
         tokenizer = AutoTokenizer.from_pretrained("huggyllama/llama-" + model_name, trust_remote_code=True)
         model = AutoModelForCausalLM.from_pretrained("huggyllama/llama-" + model_name, trust_remote_code=True,
                                                      low_cpu_mem_usage=True, config=config, **kwargs)
+        qingli = 3
     except Exception as e:
         print(f"An error occurred when initializing the model: {str(e)}")
         return None, None

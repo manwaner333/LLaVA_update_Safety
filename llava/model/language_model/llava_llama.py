@@ -100,7 +100,7 @@ class LlavaLlamaForCausalLM(LlamaForCausalLM, LlavaMetaForCausalLM):
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
-        ), image_features_size
+        )  # , image_features_size
 
     @torch.no_grad()
     def generate(

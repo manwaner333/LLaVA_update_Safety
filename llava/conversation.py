@@ -109,6 +109,9 @@ class Conversation:
     def append_message(self, role, message):
         self.messages.append([role, message])
 
+    def remove_message(self, role, message):
+        self.messages.remove([role, message])
+
     def process_image(self, image, image_process_mode, return_pil=False, image_format='PNG', max_len=1344, min_len=672):
         if image_process_mode == "Pad":
             def expand2square(pil_img, background_color=(122, 116, 104)):

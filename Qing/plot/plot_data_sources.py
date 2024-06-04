@@ -9,7 +9,7 @@ from sklearn.preprocessing import MinMaxScaler
 import json
 from sklearn.cluster import DBSCAN
 import matplotlib.pyplot as plt
-import seaborn as sns
+# import seaborn as sns
 import numpy as np
 
 # # 画出模型的大小和uncertainty metrics 指标之间的关系
@@ -234,12 +234,12 @@ n_groups = 9
 fig, ax = plt.subplots(figsize=(10, 6))
 
 index = np.arange(n_groups)
-bar_width = 0.15
+bar_width = 0.30
 opacity = 0.8
 
 # Plot each set of bars for the different methods
 rects1 = ax.bar(index, vanilla, bar_width, alpha=opacity, color='darkorange', label='M-Hal')
-rects2 = ax.bar(index + bar_width, freeCheck, bar_width, alpha=opacity, color='lightseagreen', label='NLI')
+rects2 = ax.bar(index + bar_width, freeCheck, bar_width, alpha=opacity, color='lightseagreen', label='IHAD')
 # rects3 = ax.bar(index + 2*bar_width, wo_AOP, bar_width, alpha=opacity, color='lime', label='LLaVA-1.6-7b')
 # rects4 = ax.bar(index + 3*bar_width, wo_LCL, bar_width, alpha=opacity, color='cornflowerblue', label='LLaVA-1.6-mistral')
 # rects5 = ax.bar(index + 4*bar_width, logicCheckGPT, bar_width, alpha=opacity, color='y', label='LogicCheckGPT')
@@ -254,10 +254,10 @@ ax.set_yticklabels(ax.get_yticks(), fontweight='bold')
 ax.tick_params(axis='x', labelsize=14)
 ax.tick_params(axis='y', labelsize=14)
 # ax.legend()
-ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.13), ncol=5, prop={'size': 14, 'weight': 'bold'})
-# Display the plot
+ax.legend(loc='best', ncol=5, prop={'size': 14, 'weight': 'bold'})
+# Display the plot  upper center   , bbox_to_anchor=(0.5, 1.13)
 plt.tight_layout()
 # plt.show()
 
 
-fig.savefig("data_sources.png", bbox_inches='tight', pad_inches=0.5)
+fig.savefig("data_sources_update.png", bbox_inches='tight', pad_inches=0.5)
