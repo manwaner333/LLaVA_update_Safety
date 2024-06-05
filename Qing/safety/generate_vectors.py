@@ -256,7 +256,7 @@ class ModelHelper:
         model_path = os.path.expanduser(args.model_path)
         self.model_name = get_model_name_from_path(model_path)
         self.tokenizer, self.model, self.image_processor, self.context_len = load_pretrained_model(model_path, args.model_base, self.model_name,
-                                                                                                   args.load_8bit, args.load_4bit, device=args.device)
+                                                                                                   args.load_8bit, args.load_4bit, device=self.device)
         self.END_STR = torch.tensor(self.tokenizer.encode("</s>")[1:]).to(
             self.device
         )

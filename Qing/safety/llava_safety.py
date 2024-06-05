@@ -151,170 +151,15 @@ class AttnWrapper(torch.nn.Module):
         return output
 
 
-
-# class ModelHelper:
-#     def __init__(self, model_path, model_base, model_name, load_8bit, load_4bit, device):
-#         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-#         tokenizer, model, image_processor, context_len = load_pretrained_model(model_path, model_base, model_name,
-#                                                                                load_8bit, load_4bit, device)
-#         # self.tokenizer, self.model, self.image_processor, self.context_len
-#         self.tokenizer = tokenizer
-#         self.model = model
-#         self.image_processor = image_processor
-#         self.context_len = context_len
-#
-#         self.END_STR = torch.tensor(self.tokenizer.encode("</s>")[1:]).to(
-#             self.device
-#         )
-#         for i, layer in enumerate(self.model.model.layers):
-#             self.model.model.layers[i] = BlockOutputWrapper(
-#                 layer, self.model.lm_head, self.model.model.norm, self.tokenizer
-#             )
-#
-#     def set_save_internal_decodings(self, value):
-#         for layer in self.model.model.layers:
-#             layer.save_internal_decodings = value
-#
-#     def set_after_positions(self, pos):
-#         for layer in self.model.model.layers:
-#             layer.after_position = pos
-#
-#
-#     # def prompt_to_tokens(self, instruction):
-#     #     # B_INST, E_INST = "[INST]", "[/INST]"
-#     #     # B_SYS, E_SYS = "<<SYS>>\n", "\n<</SYS>>\n\n"
-#     #     # dialog_content = B_SYS + self.system_prompt + E_SYS + instruction.strip()
-#     #     # dialog_tokens = self.tokenizer.encode(
-#     #     #     f"{B_INST} {dialog_content.strip()} {E_INST}"
-#     #     # )
-#     #     # print(f"{B_INST} {dialog_content.strip()} {E_INST}")
-#     #     E_INST = "<\s>"
-#     #     prompt = self.system_prompt + " Q: {}".format(instruction) + " " + E_INST
-#     #     dialog_tokens = self.tokenizer.encode(prompt)
-#     #     return torch.tensor(dialog_tokens).unsqueeze(0)
-#     #
-#     # def generate_text(self, prompt, max_new_tokens=50):
-#     #     tokens = self.prompt_to_tokens(prompt).to(self.device)
-#     #     return self.generate(tokens, max_new_tokens=max_new_tokens)
-#     #
-#     # def generate(self, tokens, max_new_tokens=50):
-#     #     instr_pos = find_instruction_end_postion(tokens[0], self.END_STR)
-#     #     self.set_after_positions(instr_pos)
-#     #     generated = self.model.generate(
-#     #         inputs=tokens,
-#     #         max_new_tokens=max_new_tokens,
-#     #         repetition_penalty=1.2, temperature=0.7, top_k=30, top_p=0.9, do_sample=True
-#     #         # inputs=tokens, max_new_tokens=max_new_tokens, top_k=1
-#     #     )
-#     #     return self.tokenizer.batch_decode(generated)[0]
-#
-#     def get_logits(self, tokens):
-#         with torch.no_grad():
-#             logits = self.model(tokens).logits
-#             return logits
-#
-#     def get_last_activations(self, layer):
-#         return self.model.model.layers[layer].activations
-#
-#     def set_add_activations(self, layer, activations):
-#         self.model.model.layers[layer].add(activations)
-#
-#     def set_calc_dot_product_with(self, layer, vector):
-#         self.model.model.layers[layer].calc_dot_product_with = vector
-#
-#     def get_dot_products(self, layer):
-#         return self.model.model.layers[layer].dot_products
-#
-#     def reset_all(self):
-#         for layer in self.model.model.layers:
-#             layer.reset()
-#
-#     def print_decoded_activations(self, decoded_activations, label, topk=10):
-#         data = self.get_activation_data(decoded_activations, topk)[0]
-#         print(label, data)
-#
-#     def decode_all_layers(
-#         self,
-#         tokens,
-#         topk=10,
-#         print_attn_mech=True,
-#         print_intermediate_res=True,
-#         print_mlp=True,
-#         print_block=True,
-#     ):
-#         tokens = tokens.to(self.device)
-#         self.get_logits(tokens)
-#         for i, layer in enumerate(self.model.model.layers):
-#             print(f"Layer {i}: Decoded intermediate outputs")
-#             if print_attn_mech:
-#                 self.print_decoded_activations(
-#                     layer.attn_out_unembedded, "Attention mechanism", topk=topk
-#                 )
-#             if print_intermediate_res:
-#                 self.print_decoded_activations(
-#                     layer.intermediate_resid_unembedded,
-#                     "Intermediate residual stream",
-#                     topk=topk,
-#                 )
-#             if print_mlp:
-#                 self.print_decoded_activations(
-#                     layer.mlp_out_unembedded, "MLP output", topk=topk
-#                 )
-#             if print_block:
-#                 self.print_decoded_activations(
-#                     layer.block_output_unembedded, "Block output", topk=topk
-#                 )
-#
-#     def plot_decoded_activations_for_layer(self, layer_number, tokens, topk=10):
-#         tokens = tokens.to(self.device)
-#         self.get_logits(tokens)
-#         layer = self.model.model.layers[layer_number]
-#
-#         data = {}
-#         data["Attention mechanism"] = self.get_activation_data(
-#             layer.attn_out_unembedded, topk
-#         )[1]
-#         data["Intermediate residual stream"] = self.get_activation_data(
-#             layer.intermediate_resid_unembedded, topk
-#         )[1]
-#         data["MLP output"] = self.get_activation_data(layer.mlp_out_unembedded, topk)[1]
-#         data["Block output"] = self.get_activation_data(
-#             layer.block_output_unembedded, topk
-#         )[1]
-#
-#         # Plotting
-#         fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(8, 6))
-#         fig.suptitle(f"Layer {layer_number}: Decoded Intermediate Outputs", fontsize=21)
-#
-#         for ax, (mechanism, values) in zip(axes.flatten(), data.items()):
-#             tokens, scores = zip(*values)
-#             ax.barh(tokens, scores, color="skyblue")
-#             ax.set_title(mechanism)
-#             ax.set_xlabel("Value")
-#             ax.set_ylabel("Token")
-#
-#             # Set scientific notation for x-axis labels when numbers are small
-#             ax.xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
-#             ax.ticklabel_format(style="sci", scilimits=(0, 0), axis="x")
-#
-#         plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-#         plt.show()
-#
-#     def get_activation_data(self, decoded_activations, topk=10):
-#         softmaxed = torch.nn.functional.softmax(decoded_activations[0][-1], dim=-1)
-#         values, indices = torch.topk(softmaxed, topk)
-#         probs_percent = [int(v * 100) for v in values.tolist()]
-#         tokens = self.tokenizer.batch_decode(indices.unsqueeze(-1))
-#         return list(zip(tokens, probs_percent)), list(zip(tokens, values.tolist()))
-
-
-
 class ModelHelper:
-    def __init__(self, model, tokenizer, device):
-        self.device = device
-        self.tokenizer = tokenizer
-        self.model = model
-
+    def __init__(self, args):
+        self.device = args.device
+        disable_torch_init()
+        model_path = os.path.expanduser(args.model_path)
+        self.model_name = get_model_name_from_path(model_path)
+        self.tokenizer, self.model, self.image_processor, self.context_len = load_pretrained_model(model_path, args.model_base,
+                                                                                                   self.model_name, args.load_8bit,
+                                                                                                   args.load_4bit, device=self.device)
         self.END_STR = torch.tensor(self.tokenizer.encode("</s>")[1:]).to(
             self.device
         )
@@ -331,34 +176,6 @@ class ModelHelper:
         for layer in self.model.model.layers:
             layer.after_position = pos
 
-
-    # def prompt_to_tokens(self, instruction):
-    #     # B_INST, E_INST = "[INST]", "[/INST]"
-    #     # B_SYS, E_SYS = "<<SYS>>\n", "\n<</SYS>>\n\n"
-    #     # dialog_content = B_SYS + self.system_prompt + E_SYS + instruction.strip()
-    #     # dialog_tokens = self.tokenizer.encode(
-    #     #     f"{B_INST} {dialog_content.strip()} {E_INST}"
-    #     # )
-    #     # print(f"{B_INST} {dialog_content.strip()} {E_INST}")
-    #     E_INST = "<\s>"
-    #     prompt = self.system_prompt + " Q: {}".format(instruction) + " " + E_INST
-    #     dialog_tokens = self.tokenizer.encode(prompt)
-    #     return torch.tensor(dialog_tokens).unsqueeze(0)
-    #
-    # def generate_text(self, prompt, max_new_tokens=50):
-    #     tokens = self.prompt_to_tokens(prompt).to(self.device)
-    #     return self.generate(tokens, max_new_tokens=max_new_tokens)
-    #
-    # def generate(self, tokens, max_new_tokens=50):
-    #     instr_pos = find_instruction_end_postion(tokens[0], self.END_STR)
-    #     self.set_after_positions(instr_pos)
-    #     generated = self.model.generate(
-    #         inputs=tokens,
-    #         max_new_tokens=max_new_tokens,
-    #         repetition_penalty=1.2, temperature=0.7, top_k=30, top_p=0.9, do_sample=True
-    #         # inputs=tokens, max_new_tokens=max_new_tokens, top_k=1
-    #     )
-    #     return self.tokenizer.batch_decode(generated)[0]
 
     def get_logits(self, tokens):
         with torch.no_grad():
@@ -460,100 +277,78 @@ class ModelHelper:
         return list(zip(tokens, probs_percent)), list(zip(tokens, values.tolist()))
 
 
-def eval_model(args):
-    # Model
-    disable_torch_init()
-    model_path = os.path.expanduser(args.model_path)
-    model_name = get_model_name_from_path(model_path)
-    # model_helper = ModelHelper(model_path, args.model_base, model_name, args.load_8bit, args.load_4bit, device=args.device)
-    # tokenizer, model, image_processor, context_len = model_helper.tokenizer, model_helper.model, model_helper.image_processor, model_helper.context_len
-    tokenizer, model, image_processor, context_len = load_pretrained_model(model_path, args.model_base, model_name, args.load_8bit, args.load_4bit, device=args.device)
-    modelhelper = ModelHelper(model, tokenizer, args.device)
+    def generate_text(self, image_file, prompt, max_new_tokens=50):
+        noise_figure = False
+        image = load_image(os.path.join(args.image_folder, image_file), noise_figure)
+        image_size = image.size
+        image_tensor = process_images([image], self.image_processor, self.model.config)
 
-    questions = [json.loads(q) for q in open(os.path.expanduser(args.question_file), "r")]
-    questions = get_chunk(questions, args.num_chunks, args.chunk_idx)
-    answers_file = os.path.expanduser(args.answers_file)
-    os.makedirs(os.path.dirname(answers_file), exist_ok=True)
-    noise_figure = args.noise_figure
-
-    image_file = "36cfe1cf-73d6-42f0-b421-d3d37aa66ba3.png"
-    qs = "Who is the person in the image and what is the context of the 'surprising 2020 election' prediction?"
-
-
-    # load image
-    image = load_image(os.path.join(args.image_folder, image_file), noise_figure)
-    image_size = image.size
-    image_tensor = process_images([image], image_processor, model.config)
-
-    if type(image_tensor) is list:
-        image_tensor = [image.to(model.device, dtype=torch.float16) for image in image_tensor]
-    else:
-        image_tensor = image_tensor.to(model.device, dtype=torch.float16)
-
-    # load conv
-    if "llama-2" in model_name.lower():
-        conv_mode = "llava_llama_2"
-    elif "mistral" in model_name.lower():
-        conv_mode = "mistral_instruct"
-    elif "v1.6-34b" in model_name.lower():
-        conv_mode = "chatml_direct"
-    elif "v1" in model_name.lower():
-        conv_mode = "llava_v1"
-    elif "mpt" in model_name.lower():
-        conv_mode = "mpt"
-    else:
-        conv_mode = "llava_v0"
-
-    if args.conv_mode is not None and conv_mode != args.conv_mode:
-        print(
-            '[WARNING] the auto inferred conversation mode is {}, while `--conv-mode` is {}, using {}'.format(
-                conv_mode, args.conv_mode, args.conv_mode))
-    else:
-        args.conv_mode = conv_mode
-
-
-    conv = conv_templates[args.conv_mode].copy()
-    if "mpt" in model_name.lower():
-        roles = ('user', 'assistant')
-    else:
-        roles = conv.roles
-
-    if image is not None:
-        if model.config.mm_use_im_start_end:
-            inp = DEFAULT_IM_START_TOKEN + DEFAULT_IMAGE_TOKEN + DEFAULT_IM_END_TOKEN + '\n'
+        if type(image_tensor) is list:
+            image_tensor = [image.to(self.model.device, dtype=torch.float16) for image in image_tensor]
         else:
-            inp = DEFAULT_IMAGE_TOKEN + '\n' + qs
+            image_tensor = image_tensor.to(self.model.device, dtype=torch.float16)
 
-        conv.append_message(conv.roles[0], inp)
-        image = None
+        # load conv
+        if "llama-2" in self.model_name.lower():
+            conv_mode = "llava_llama_2"
+        elif "mistral" in self.model_name.lower():
+            conv_mode = "mistral_instruct"
+        elif "v1.6-34b" in self.model_name.lower():
+            conv_mode = "chatml_direct"
+        elif "v1" in self.model_name.lower():
+            conv_mode = "llava_v1"
+        elif "mpt" in self.model_name.lower():
+            conv_mode = "mpt"
+        else:
+            conv_mode = "llava_v0"
 
-    conv.append_message(conv.roles[1], None)
-    prompt = conv.get_prompt()
-    input_ids = tokenizer_image_token(prompt, tokenizer, IMAGE_TOKEN_INDEX, return_tensors='pt').unsqueeze(0).to(
-        model.device)
+        if args.conv_mode is not None and conv_mode != args.conv_mode:
+            print(
+                '[WARNING] the auto inferred conversation mode is {}, while `--conv-mode` is {}, using {}'.format(
+                    conv_mode, args.conv_mode, args.conv_mode))
+        else:
+            args.conv_mode = conv_mode
 
-    stop_str = conv.sep if conv.sep_style != SeparatorStyle.TWO else conv.sep2
-    keywords = [stop_str]
-    streamer = TextStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
+        conv = conv_templates[args.conv_mode].copy()
+        if "mpt" in self.model_name.lower():
+            roles = ('user', 'assistant')
+        else:
+            roles = conv.roles
 
-    # with torch.inference_mode():
-    model_outputs = model.generate(
-        input_ids,
-        images=image_tensor,
-        image_sizes=[image_size],
-        output_hidden_states=True,
-        max_length=100
-    )
+        if image is not None:
+            if self.model.config.mm_use_im_start_end:
+                inp = DEFAULT_IM_START_TOKEN + DEFAULT_IMAGE_TOKEN + DEFAULT_IM_END_TOKEN + '\n'
+            else:
+                inp = DEFAULT_IMAGE_TOKEN + '\n' + prompt
 
-    res = model.tokenizer.decode(model_outputs[0], skip_special_tokens=True)
-    print(res)
-    qingli = 3
+            conv.append_message(conv.roles[0], inp)
+            image = None
 
+        conv.append_message(conv.roles[1], None)
+        prompt = conv.get_prompt()
+        input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX,
+                                          return_tensors='pt').unsqueeze(0).to(
+            self.model.device)
 
+        stop_str = conv.sep if conv.sep_style != SeparatorStyle.TWO else conv.sep2
+        keywords = [stop_str]
+        streamer = TextStreamer(self.tokenizer, skip_prompt=True, skip_special_tokens=True)
 
+        # with torch.inference_mode():
+        model_outputs = self.model.generate(
+            input_ids,
+            images=image_tensor,
+            image_sizes=[image_size],
+            output_hidden_states=True,
+            max_length=max_new_tokens
+        )
 
-    # with open(answers_file, 'wb') as file:
-    #     pickle.dump(responses, file)
+        res = self.tokenizer.decode(model_outputs[0], skip_special_tokens=True)
+
+        return res
+
+def get_vec(layer):
+    return torch.load(f"vectors/vec_layer_{layer}.pt")
 
 
 if __name__ == "__main__":
@@ -579,4 +374,58 @@ if __name__ == "__main__":
     parser.add_argument("--hidden_layer", type=int, default=32)
     args = parser.parse_args()
 
-    eval_model(args)
+    # eval_model(args)
+
+    model_helper = ModelHelper(args)
+    layer = 9
+    multiplier = -1.3
+    max_new_tokens = 100
+
+    model_helper.set_save_internal_decodings(False)
+    model_helper.reset_all()
+    vec = get_vec(layer)
+    model_helper.set_add_activations(layer, multiplier * vec.cuda())
+
+    # model_helper.reset_all()
+    # vec = get_vec(layer)
+    # model_helper.set_save_internal_decodings(False)
+    # model_helper.set_calc_dot_product_with(layer, vec.cuda())
+
+    # image_file = "36cfe1cf-73d6-42f0-b421-d3d37aa66ba3.png"
+    # qs = "Who is the person in the image and what is the context of the 'surprising 2020 election' prediction?"
+    # res = model_helper.generate_text(image_file, qs, max_new_tokens=100)
+    # print(res)
+
+    questions = [json.loads(q) for q in open(os.path.expanduser(args.question_file), "r")]
+    questions = get_chunk(questions, args.num_chunks, args.chunk_idx)
+    answers_file = os.path.expanduser(args.answers_file)
+    os.makedirs(os.path.dirname(answers_file), exist_ok=True)
+    responses = {}
+
+    count = 0
+    for line in tqdm(questions):
+        idx = line['id']
+        image_file = line['image']
+        prompt = line['question']
+        response_from_dataset = line['response_from_dataset']
+        res = model_helper.generate_text(image_file, prompt, max_new_tokens=100)
+        response_adjust_model = res
+
+        output = {"id": idx,
+                  "image_file": image_file,
+                  "prompt": prompt,
+                  "response_from_dataset": response_from_dataset,
+                  "response_adjust_model": response_adjust_model,
+                  }
+        responses[count] = output
+        count += 1
+
+        # if count > 3:
+        #     break
+
+    with open(answers_file, 'wb') as file:
+        pickle.dump(responses, file)
+
+
+
+
