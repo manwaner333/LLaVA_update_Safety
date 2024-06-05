@@ -378,14 +378,16 @@ if __name__ == "__main__":
 
     model_helper = ModelHelper(args)
     layer = 9
-    multiplier = -1.3
+    multiplier = -0.5
     max_new_tokens = 100
 
+    # 1
     model_helper.set_save_internal_decodings(False)
     model_helper.reset_all()
     vec = get_vec(layer)
     model_helper.set_add_activations(layer, multiplier * vec.cuda())
 
+    # 2
     # model_helper.reset_all()
     # vec = get_vec(layer)
     # model_helper.set_save_internal_decodings(False)
@@ -406,15 +408,16 @@ if __name__ == "__main__":
     for line in tqdm(questions):
         idx = line['id']
         image_file = line['image']
-        prompt = line['question']
-        response_from_dataset = line['response_from_dataset']
+        prompt = line['prompt']
+        # prompt = line['question']
+        # response_from_dataset = line['response_from_dataset']
         res = model_helper.generate_text(image_file, prompt, max_new_tokens=100)
         response_adjust_model = res
 
         output = {"id": idx,
                   "image_file": image_file,
                   "prompt": prompt,
-                  "response_from_dataset": response_from_dataset,
+                  # "response_from_dataset": response_from_dataset,
                   "response_adjust_model": response_adjust_model,
                   }
         responses[count] = output
