@@ -348,13 +348,14 @@ class ModelHelper:
         streamer = TextStreamer(self.tokenizer, skip_prompt=True, skip_special_tokens=True)
 
         # with torch.inference_mode():
-        model_outputs, image_features_size = self.model(
+        model_outputs, image_features_size = self.model.generate(
             input_ids,
             images=image_tensor,
             image_sizes=[image_size],
-            output_hidden_states=True,
+            # output_hidden_states=True,
+            max_length=2
         )
-
+        # image_features_size
         # res = self.tokenizer.decode(model_outputs[0], skip_special_tokens=True)
 
         return image_features_size
@@ -402,7 +403,9 @@ if __name__ == "__main__":
     new_data_file = "playground/data/vlguard/llava_v1.6_vicuna_7b_vlguard_test.json"
     with open(new_data_file, 'w') as file:
         for line in tqdm(questions):
-            print(count)
+            # if count == 18:
+            #     count += 1
+            #     continue
             idx = line['id']
             image_file = line['image']
             prompt = line['question']

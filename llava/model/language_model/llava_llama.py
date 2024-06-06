@@ -100,7 +100,7 @@ class LlavaLlamaForCausalLM(LlamaForCausalLM, LlavaMetaForCausalLM):
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
-        )  # , image_features_size
+        )  #, image_features_size
 
     @torch.no_grad()
     def generate(
@@ -123,7 +123,7 @@ class LlavaLlamaForCausalLM(LlamaForCausalLM, LlavaMetaForCausalLM):
                 _,
                 inputs_embeds,
                 _,
-                _
+                image_features_size
             ) = self.prepare_inputs_labels_for_multimodal(
                 inputs,
                 position_ids,
@@ -141,7 +141,7 @@ class LlavaLlamaForCausalLM(LlamaForCausalLM, LlavaMetaForCausalLM):
             attention_mask=attention_mask,
             inputs_embeds=inputs_embeds,
             **kwargs
-        )
+        ), image_features_size
 
     def prepare_inputs_for_generation(self, input_ids, past_key_values=None,
                                       inputs_embeds=None, **kwargs):
