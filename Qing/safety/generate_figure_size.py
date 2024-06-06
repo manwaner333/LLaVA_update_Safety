@@ -355,9 +355,9 @@ class ModelHelper:
             output_hidden_states=True,
         )
 
-        res = self.tokenizer.decode(model_outputs[0], skip_special_tokens=True)
+        # res = self.tokenizer.decode(model_outputs[0], skip_special_tokens=True)
 
-        return res, image_features_size
+        return image_features_size
 
 def get_vec(layer):
     return torch.load(f"vectors/vec_layer_{layer}.pt")
@@ -406,7 +406,7 @@ if __name__ == "__main__":
             idx = line['id']
             image_file = line['image']
             prompt = line['question']
-            response_adjust_model, image_features_size = model_helper.generate_text(image_file, prompt, max_new_tokens=2)
+            image_features_size = model_helper.generate_text(image_file, prompt, max_new_tokens=2)
             json.dump({'id': idx, 'image_file': image_file, 'prompt': prompt, 'image_features_size': image_features_size},
                       file)
             file.write('\n')
