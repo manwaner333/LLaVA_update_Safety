@@ -341,9 +341,65 @@ class ModelHelper:
                     layer.block_output_unembedded, "Block output", topk=topk
                 )
 
-    def plot_decoded_activations_for_layer(self, layer_number, tokens, topk=10):
-        tokens = tokens.to(self.device)
-        self.get_logits(tokens)
+    def plot_decoded_activations_for_layer(self, image_file, prompt, figure_size, layer_number, topk=10):
+        # tokens = tokens.to(self.device)
+        noise_figure = False
+        image = load_image(os.path.join(args.image_folder, image_file), noise_figure)
+        image_size = image.size
+        image_tensor = process_images([image], self.image_processor, self.model.config)
+
+        if type(image_tensor) is list:
+            image_tensor = [image.to(self.model.device, dtype=torch.float16) for image in image_tensor]
+        else:
+            image_tensor = image_tensor.to(self.model.device, dtype=torch.float16)
+
+        # load conv
+        if "llama-2" in self.model_name.lower():
+            conv_mode = "llava_llama_2"
+        elif "mistral" in self.model_name.lower():
+            conv_mode = "mistral_instruct"
+        elif "v1.6-34b" in self.model_name.lower():
+            conv_mode = "chatml_direct"
+        elif "v1" in self.model_name.lower():
+            conv_mode = "llava_v1"
+        elif "mpt" in self.model_name.lower():
+            conv_mode = "mpt"
+        else:
+            conv_mode = "llava_v0"
+
+        if args.conv_mode is not None and conv_mode != args.conv_mode:
+            print('[WARNING] the auto inferred conversation mode is {}, while `--conv-mode` is {}, using {}'.format(
+                conv_mode, args.conv_mode, args.conv_mode))
+        else:
+            args.conv_mode = conv_mode
+
+        conv = conv_templates[args.conv_mode].copy()
+        if "mpt" in self.model_name.lower():
+            roles = ('user', 'assistant')
+        else:
+            roles = conv.roles
+
+        if image is not None:
+            if self.model.config.mm_use_im_start_end:
+                inp = DEFAULT_IM_START_TOKEN + DEFAULT_IMAGE_TOKEN + DEFAULT_IM_END_TOKEN + '\n'
+            else:
+                inp = DEFAULT_IMAGE_TOKEN + '\n' + prompt
+
+            conv.append_message(conv.roles[0], inp)
+            image = None
+
+        conv.append_message(conv.roles[1], None)
+        prompt = conv.get_prompt()
+        input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX,
+                                          return_tensors='pt').unsqueeze(0).to(self.model.device)
+
+        instr_pos = find_instruction_end_postion(input_ids[0], self.END_STR) + figure_size - 1
+        self.set_after_positions(instr_pos)
+        stop_str = conv.sep if conv.sep_style != SeparatorStyle.TWO else conv.sep2
+        keywords = [stop_str]
+        streamer = TextStreamer(self.tokenizer, skip_prompt=True, skip_special_tokens=True)
+        self.get_logits(input_ids, image_tensor, image_size)
+
         layer = self.model.model.layers[layer_number]
 
         data = {}
@@ -374,7 +430,8 @@ class ModelHelper:
             ax.ticklabel_format(style="sci", scilimits=(0, 0), axis="x")
 
         plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-        plt.show()
+        # plt.show()
+        plt.savefig("result/layer_encoder.png")
 
     def get_activation_data(self, decoded_activations, topk=10):
         softmaxed = torch.nn.functional.softmax(decoded_activations[0][-1], dim=-1)
@@ -536,8 +593,10 @@ if __name__ == "__main__":
         print_intermediate_res = True
         print_mlp = True
         print_block = True
-        model_helper.decode_all_layers(image_file, prompt, figure_size, topk, print_attn_mech
-                                       , print_intermediate_res, print_mlp, print_block)
+        layer_number = 12
+        # model_helper.decode_all_layers(image_file, prompt, figure_size, topk, print_attn_mech
+        #                                , print_intermediate_res, print_mlp, print_block)
+        model_helper.plot_decoded_activations_for_layer(image_file, prompt, figure_size, layer_number, topk)
         # output = {"id": idx,
         #           "image_file": image_file,
         #           "prompt": prompt,
