@@ -48,3 +48,29 @@ for idx, response in responses_3.items():
     prompt = response['prompt']
     response_from_dataset = response['response_from_dataset']
     response_adjust_model = response['response_adjust_model']
+
+
+
+file_path_4 = 'result/safebench/safebench_layer_9_multi_ne_0.5.bin'
+with open(file_path_4, "rb") as f:
+    responses_4 = pickle.load(f)
+
+
+for idx, response in responses_4.items():
+    id = response['id']
+    image_file = response['image_file']
+    prompt = response['prompt']
+
+
+
+
+
+file_path_5 = 'result/safebench/safebench_origian.bin'
+with open(file_path_5, "rb") as f:
+    responses_5 = pickle.load(f)
+
+
+for idx, response in responses_5.items():
+    id = response['id']
+    image_file = response['image_file']
+    prompt = response['prompt']

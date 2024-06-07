@@ -185,7 +185,7 @@ def eval_model(args):
                 # output_attentions=True,
                 # streamer=streamer,
             )
-
+        # image_features_size
         # hidden states
         hidden_states = model_outputs['hidden_states'][hidden_layer][0]
 

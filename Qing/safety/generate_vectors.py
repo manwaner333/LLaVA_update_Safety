@@ -473,10 +473,7 @@ def generate_and_save_steering_vectors(model, dataset, start_layer=0, end_layer=
         vec = (positive - negative).mean(dim=0)
         torch.save(vec, f"vectors/vec_layer_{layer}.pt")
         torch.save(positive, f"vectors/positive_layer_{layer}.pt")
-        torch.save(
-            negative,
-            f"vectors/negative_layer_{layer}.pt",
-        )
+        torch.save(negative, f"vectors/negative_layer_{layer}.pt",)
 
 
 
@@ -485,37 +482,42 @@ if __name__ == "__main__":
     parser.add_argument("--model-path", type=str, default="facebook/opt-350m")
     parser.add_argument("--model-base", type=str, default=None)
     parser.add_argument("--image-folder", type=str, default="")
-    parser.add_argument("--question-file", type=str, default="tables/question.jsonl")
-    parser.add_argument("--answers-file", type=str, default="answer.bin")
+    parser.add_argument("--question-file", type=str, default="playground/data/vlguard/train_filter.json")
+    parser.add_argument("--answers-file", type=str, default="answer.jsonl")
     parser.add_argument("--conv-mode", type=str, default=None)
     parser.add_argument("--num-chunks", type=int, default=1)
     parser.add_argument("--chunk-idx", type=int, default=0)
-    parser.add_argument("--temperature", type=float, default=0.5)  # 0.2
-    parser.add_argument("--top_p", type=float, default=None)  # 0.99
-    parser.add_argument("--top_k", type=int, default=None)  # 5 # there is no top-k before
-    parser.add_argument("--num_beams", type=int, default=1)
-    parser.add_argument("--max_new_tokens", type=int, default=1)
-    parser.add_argument("--with_role", type=bool, default=True)
-    parser.add_argument("--noise_figure", type=bool, default=False)
+    parser.add_argument("--temperature", type=float, default=None)  # 0.2
+    parser.add_argument("--top-p", type=float, default=None)  # 0.99
+    parser.add_argument("--top-k", type=int, default=None)  # 5 # there is no top-k before
+    parser.add_argument("--num-beams", type=int, default=1)
+    parser.add_argument("--max-new-tokens", type=int, default=1)
+    parser.add_argument("--noise-figure", type=bool, default=False)
     parser.add_argument("--load-8bit", action="store_true")
     parser.add_argument("--load-4bit", action="store_true")
     parser.add_argument("--device", type=str, default="cuda")
-    parser.add_argument("--hidden_layer", type=int, default=32)
-    args = parser.parse_args()
+    parser.add_argument("--add-activations", type=bool, default=False)
+    parser.add_argument("--add-dot-products", type=bool, default=False)
+    parser.add_argument("--adj-layer", type=int, default=8)
+    parser.add_argument("--multiplier", type=float, default=0.5)
+    parser.add_argument("--figure-sizes-file", type=str, default="figure_sizes.jsonl")
+    parser.add_argument("--start-layer", type=int, default=8)
+    parser.add_argument("--end-layer", type=int, default=10)
 
+    args = parser.parse_args()
 
     model = ModelHelper(args)
 
-    data_file = "playground/data/vlguard/train_filter.json"
+    question_file = os.path.expanduser(args.question_file)
     data = []
-    with open(data_file, "r") as f:
+    with open(question_file, "r") as f:
         for line in f:
             data.append(json.loads(line))
     dataset = ComparisonDataset(data, model.tokenizer, model.image_processor, model.model_name, model.device)
     print(f"Using {len(dataset)} samples")
 
-    start_layer = 8
-    end_layer = 10
+    start_layer = args.start_layer
+    end_layer = args.end_layer
     generate_and_save_steering_vectors(model, dataset, start_layer=start_layer, end_layer=end_layer)
     plot_all_activations(list(range(start_layer, end_layer + 1)))
 

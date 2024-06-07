@@ -18,7 +18,7 @@ import numpy as np
 import pickle
 from io import BytesIO
 from scipy.stats import entropy
-import spacy
+# import spacy
 from transformers import TextStreamer
 import re
 from PIL import Image, ImageFilter
@@ -37,6 +37,10 @@ def split_list(lst, n):
 def get_chunk(lst, n, k):
     chunks = split_list(lst, n)
     return chunks[k]
+
+def get_vec(layer):
+    return torch.load(f"vectors/vec_layer_{layer}.pt")
+
 
 
 def load_image(image_file, noise_figure):
@@ -58,10 +62,22 @@ def add_vector_after_position(matrix, vector, position_ids, after=None):
         after_id = position_ids.min().item() - 1
     mask = position_ids > after_id
     mask = mask.unsqueeze(-1)
+    if (position_ids > after_id).float().sum() > 1:
+        print("There are some problems about insert position!!!")
     matrix += mask.float() * vector
     return matrix
 
-
+def find_subtensor_position(tensor, sub_tensor):
+    n, m = tensor.size(0), sub_tensor.size(0)
+    if m > n:
+        return -1
+    for i in range(n - m + 1):
+        if torch.equal(tensor[i : i + m], sub_tensor):
+            return i
+    return -1
+def find_instruction_end_postion(tokens, end_str):
+    end_pos = find_subtensor_position(tokens, end_str)
+    return end_pos + len(end_str) - 1
 
 class BlockOutputWrapper(torch.nn.Module):
     def __init__(self, block, unembed_matrix, norm, tokenizer):
@@ -160,7 +176,7 @@ class ModelHelper:
         self.tokenizer, self.model, self.image_processor, self.context_len = load_pretrained_model(model_path, args.model_base,
                                                                                                    self.model_name, args.load_8bit,
                                                                                                    args.load_4bit, device=self.device)
-        self.END_STR = torch.tensor(self.tokenizer.encode("</s>")[1:]).to(
+        self.END_STR = torch.tensor(self.tokenizer.encode("ASSISTANT:")[1:]).to(
             self.device
         )
         for i, layer in enumerate(self.model.model.layers):
@@ -187,6 +203,7 @@ class ModelHelper:
 
     def set_add_activations(self, layer, activations):
         self.model.model.layers[layer].add(activations)
+
 
     def set_calc_dot_product_with(self, layer, vector):
         self.model.model.layers[layer].calc_dot_product_with = vector
@@ -277,7 +294,7 @@ class ModelHelper:
         return list(zip(tokens, probs_percent)), list(zip(tokens, values.tolist()))
 
 
-    def generate_text(self, image_file, prompt, max_new_tokens=50):
+    def generate_text(self, image_file, prompt, figure_size, max_new_tokens=50):
         noise_figure = False
         image = load_image(os.path.join(args.image_folder, image_file), noise_figure)
         image_size = image.size
@@ -303,8 +320,7 @@ class ModelHelper:
             conv_mode = "llava_v0"
 
         if args.conv_mode is not None and conv_mode != args.conv_mode:
-            print(
-                '[WARNING] the auto inferred conversation mode is {}, while `--conv-mode` is {}, using {}'.format(
+            print('[WARNING] the auto inferred conversation mode is {}, while `--conv-mode` is {}, using {}'.format(
                     conv_mode, args.conv_mode, args.conv_mode))
         else:
             args.conv_mode = conv_mode
@@ -327,19 +343,20 @@ class ModelHelper:
         conv.append_message(conv.roles[1], None)
         prompt = conv.get_prompt()
         input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX,
-                                          return_tensors='pt').unsqueeze(0).to(
-            self.model.device)
+                                          return_tensors='pt').unsqueeze(0).to(self.model.device)
+
+        instr_pos = find_instruction_end_postion(input_ids[0], self.END_STR) + figure_size - 1
+        self.set_after_positions(instr_pos)
 
         stop_str = conv.sep if conv.sep_style != SeparatorStyle.TWO else conv.sep2
         keywords = [stop_str]
         streamer = TextStreamer(self.tokenizer, skip_prompt=True, skip_special_tokens=True)
 
         # with torch.inference_mode():
-        model_outputs = self.model.generate(
+        model_outputs, image_features_size = self.model.generate(
             input_ids,
             images=image_tensor,
             image_sizes=[image_size],
-            output_hidden_states=True,
             max_length=max_new_tokens
         )
 
@@ -347,8 +364,6 @@ class ModelHelper:
 
         return res
 
-def get_vec(layer):
-    return torch.load(f"vectors/vec_layer_{layer}.pt")
 
 
 if __name__ == "__main__":
@@ -357,77 +372,87 @@ if __name__ == "__main__":
     parser.add_argument("--model-base", type=str, default=None)
     parser.add_argument("--image-folder", type=str, default="")
     parser.add_argument("--question-file", type=str, default="tables/question.jsonl")
-    parser.add_argument("--answers-file", type=str, default="answer.bin")
+    parser.add_argument("--answers-file", type=str, default="answer.jsonl")
     parser.add_argument("--conv-mode", type=str, default=None)
     parser.add_argument("--num-chunks", type=int, default=1)
     parser.add_argument("--chunk-idx", type=int, default=0)
-    parser.add_argument("--temperature", type=float, default=0.5)  # 0.2
-    parser.add_argument("--top_p", type=float, default=None)  # 0.99
-    parser.add_argument("--top_k", type=int, default=None)  # 5 # there is no top-k before
-    parser.add_argument("--num_beams", type=int, default=1)
-    parser.add_argument("--max_new_tokens", type=int, default=1)
-    parser.add_argument("--with_role", type=bool, default=True)
-    parser.add_argument("--noise_figure", type=bool, default=False)
+    parser.add_argument("--temperature", type=float, default=None)  # 0.2
+    parser.add_argument("--top-p", type=float, default=None)  # 0.99
+    parser.add_argument("--top-k", type=int, default=None)  # 5 # there is no top-k before
+    parser.add_argument("--num-beams", type=int, default=1)
+    parser.add_argument("--max-new-tokens", type=int, default=1)
+    parser.add_argument("--noise-figure", type=bool, default=False)
     parser.add_argument("--load-8bit", action="store_true")
     parser.add_argument("--load-4bit", action="store_true")
     parser.add_argument("--device", type=str, default="cuda")
-    parser.add_argument("--hidden_layer", type=int, default=32)
+    parser.add_argument("--add-activations", type=bool, default=False)
+    parser.add_argument("--add-dot-products", type=bool, default=False)
+    parser.add_argument("--adj-layer", type=int, default=8)
+    parser.add_argument("--multiplier", type=float, default=0.5)
+    parser.add_argument("--figure-sizes-file", type=str, default="figure_sizes.jsonl")
+
     args = parser.parse_args()
 
-    # eval_model(args)
-
     model_helper = ModelHelper(args)
-    layer = 9
-    multiplier = -0.5
-    max_new_tokens = 100
 
-    # 1
+    print("model-path: {}; question-file: {}; image-folder: {}; adj-layer: {}; multiplier: {}; max-new-tokens: {}; "
+          "add-activations: {}; add-dot-products: {}; answers-file: {}"
+          .format(args.model_path, args.question_file, args.image_folder, args.adj_layer, args.multiplier
+                  , args.max_new_tokens, args.add_activations, args.add_dot_products, args.answers_file))
+
+    layer = args.adj_layer
+    multiplier = args.multiplier
+    max_new_tokens = args.max_new_tokens
+
     model_helper.set_save_internal_decodings(False)
-    model_helper.reset_all()
-    vec = get_vec(layer)
-    model_helper.set_add_activations(layer, multiplier * vec.cuda())
 
-    # 2
-    # model_helper.reset_all()
-    # vec = get_vec(layer)
-    # model_helper.set_save_internal_decodings(False)
-    # model_helper.set_calc_dot_product_with(layer, vec.cuda())
+    if args.add_activations:
+        print("adjust activations.")
+        model_helper.reset_all()
+        vec = get_vec(layer)
+        model_helper.set_add_activations(layer, multiplier * vec.cuda())
+    elif args.add_dot_products:
+        print("adjust dot_products.")
+        model_helper.reset_all()
+        vec = get_vec(layer)
+        model_helper.set_calc_dot_product_with(layer, vec.cuda())
 
-    # image_file = "36cfe1cf-73d6-42f0-b421-d3d37aa66ba3.png"
-    # qs = "Who is the person in the image and what is the context of the 'surprising 2020 election' prediction?"
-    # res = model_helper.generate_text(image_file, qs, max_new_tokens=100)
-    # print(res)
 
     questions = [json.loads(q) for q in open(os.path.expanduser(args.question_file), "r")]
     questions = get_chunk(questions, args.num_chunks, args.chunk_idx)
     answers_file = os.path.expanduser(args.answers_file)
+    if os.path.exists(answers_file):
+        os.remove(answers_file)
     os.makedirs(os.path.dirname(answers_file), exist_ok=True)
+    figure_sizes_file = os.path.expanduser(args.figure_sizes_file)
     responses = {}
+    figure_size_info = {}
+
+    with open(figure_sizes_file, 'r') as file:
+        for line in file:
+            line_info = json.loads(line)
+            figure_size_info[line_info['image_file']] = line_info['image_features_size']
 
     count = 0
-    for line in tqdm(questions):
-        idx = line['id']
-        image_file = line['image']
-        prompt = line['prompt']
-        # prompt = line['question']
-        # response_from_dataset = line['response_from_dataset']
-        res = model_helper.generate_text(image_file, prompt, max_new_tokens=100)
-        response_adjust_model = res
+    with open(answers_file, 'w') as file:
+        for line in tqdm(questions):
+            idx = line['id']
+            image_file = line['image']
+            prompt = line['prompt']
+            response_from_dataset = line['response_from_dataset']
+            figure_size = figure_size_info[image_file][0]
+            res = model_helper.generate_text(image_file, prompt, figure_size, max_new_tokens=10)
+            output = {"id": idx,
+                      "image_file": image_file,
+                      "prompt": prompt,
+                      "response": res,
+                      "response_from_dataset": response_from_dataset,
+                      }
+            json.dump(output,  file)
+            file.write('\n')
+            count += 1
+    print("Final count is {}".format(count))
 
-        output = {"id": idx,
-                  "image_file": image_file,
-                  "prompt": prompt,
-                  # "response_from_dataset": response_from_dataset,
-                  "response_adjust_model": response_adjust_model,
-                  }
-        responses[count] = output
-        count += 1
-
-        # if count > 3:
-        #     break
-
-    with open(answers_file, 'wb') as file:
-        pickle.dump(responses, file)
 
 
 

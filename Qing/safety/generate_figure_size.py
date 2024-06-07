@@ -352,12 +352,8 @@ class ModelHelper:
             input_ids,
             images=image_tensor,
             image_sizes=[image_size],
-            # output_hidden_states=True,
             max_length=2
         )
-        # image_features_size
-        # res = self.tokenizer.decode(model_outputs[0], skip_special_tokens=True)
-
         return image_features_size
 
 def get_vec(layer):
@@ -370,53 +366,49 @@ if __name__ == "__main__":
     parser.add_argument("--model-base", type=str, default=None)
     parser.add_argument("--image-folder", type=str, default="")
     parser.add_argument("--question-file", type=str, default="tables/question.jsonl")
-    parser.add_argument("--answers-file", type=str, default="answer.bin")
+    parser.add_argument("--answers-file", type=str, default="answer.jsonl")
     parser.add_argument("--conv-mode", type=str, default=None)
     parser.add_argument("--num-chunks", type=int, default=1)
     parser.add_argument("--chunk-idx", type=int, default=0)
-    parser.add_argument("--temperature", type=float, default=0.5)  # 0.2
-    parser.add_argument("--top_p", type=float, default=None)  # 0.99
-    parser.add_argument("--top_k", type=int, default=None)  # 5 # there is no top-k before
-    parser.add_argument("--num_beams", type=int, default=1)
-    parser.add_argument("--max_new_tokens", type=int, default=1)
-    parser.add_argument("--with_role", type=bool, default=True)
-    parser.add_argument("--noise_figure", type=bool, default=False)
+    parser.add_argument("--temperature", type=float, default=None)  # 0.2
+    parser.add_argument("--top-p", type=float, default=None)  # 0.99
+    parser.add_argument("--top-k", type=int, default=None)  # 5 # there is no top-k before
+    parser.add_argument("--num-beams", type=int, default=1)
+    parser.add_argument("--max-new-tokens", type=int, default=1)
+    parser.add_argument("--noise-figure", type=bool, default=False)
     parser.add_argument("--load-8bit", action="store_true")
     parser.add_argument("--load-4bit", action="store_true")
     parser.add_argument("--device", type=str, default="cuda")
-    parser.add_argument("--hidden_layer", type=int, default=32)
+    parser.add_argument("--add-activations", type=bool, default=False)
+    parser.add_argument("--add-dot-products", type=bool, default=False)
+    parser.add_argument("--adj-layer", type=int, default=8)
+    parser.add_argument("--multiplier", type=float, default=0.5)
+    parser.add_argument("--figure-sizes-file", type=str, default="figure_sizes.jsonl")
     args = parser.parse_args()
 
-    # eval_model(args)
-
     model_helper = ModelHelper(args)
-    layer = 9
-    multiplier = -0.5
-    max_new_tokens = 100
-
-
     model_helper.set_save_internal_decodings(False)
     questions = [json.loads(q) for q in open(os.path.expanduser(args.question_file), "r")]
     questions = get_chunk(questions, args.num_chunks, args.chunk_idx)
 
     count = 0
-    new_data_file = "playground/data/vlguard/llava_v1.6_vicuna_7b_vlguard_test.json"
-    with open(new_data_file, 'w') as file:
+    figure_sizes_file = os.path.expanduser(args.figure_sizes_file)
+    if os.path.exists(figure_sizes_file):
+        os.remove(figure_sizes_file)
+
+    with open(figure_sizes_file, 'w') as file:
         for line in tqdm(questions):
-            # if count == 18:
-            #     count += 1
-            #     continue
             idx = line['id']
             image_file = line['image']
-            prompt = line['question']
+            prompt = line['prompt']
             image_features_size = model_helper.generate_text(image_file, prompt, max_new_tokens=2)
             json.dump({'id': idx, 'image_file': image_file, 'prompt': prompt, 'image_features_size': image_features_size},
                       file)
             file.write('\n')
             count += 1
-            print(count)
-            if count > 3:
-                break
+            # if count > 3:
+            #     break
+    print("Final count is {}".format(count))
 
 
 
