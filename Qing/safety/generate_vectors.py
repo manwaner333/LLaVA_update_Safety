@@ -396,8 +396,8 @@ def save_activation_projection_tsne(
     plt.savefig(fname)
 
 def plot_all_activations(layers, save_path="aa"):
-    if not os.path.exists("clustering"):
-        os.mkdir("clustering")
+    if not os.path.exists(f"clustering/{save_path}"):
+        os.mkdir(f"clustering/{save_path}")
     for layer in layers:
         pos = torch.load(f"vectors/{save_path}/positive_layer_{layer}.pt")
         neg = torch.load(f"vectors/{save_path}/negative_layer_{layer}.pt")
@@ -433,6 +433,8 @@ def generate_and_save_steering_vectors(model, dataset, start_layer=0, end_layer=
         positive = torch.stack(positive_activations[layer])
         negative = torch.stack(negative_activations[layer])
         vec = (positive - negative).mean(dim=0)
+        if not os.path.exists(f"vectors/{save_path}"):
+            os.mkdir(f"vectors/{save_path}")
         torch.save(vec, f"vectors/{save_path}/vec_layer_{layer}.pt")
         torch.save(positive, f"vectors/{save_path}/positive_layer_{layer}.pt")
         torch.save(negative, f"vectors/{save_path}/negative_layer_{layer}.pt")
@@ -479,6 +481,7 @@ if __name__ == "__main__":
     print(f"Using {len(dataset)} samples")
 
     save_path = args.model_path.split("/")[-1] + "_" + args.question_file.split("/")[-1].split(".")[0]
+
     start_layer = args.start_layer
     end_layer = args.end_layer
     generate_and_save_steering_vectors(model, dataset, start_layer=start_layer, end_layer=end_layer, save_path=save_path)
