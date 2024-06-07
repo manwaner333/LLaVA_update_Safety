@@ -500,10 +500,10 @@ if __name__ == "__main__":
 
     questions = [json.loads(q) for q in open(os.path.expanduser(args.question_file), "r")]
     questions = get_chunk(questions, args.num_chunks, args.chunk_idx)
-    answers_file = os.path.expanduser(args.answers_file)
-    if os.path.exists(answers_file):
-        os.remove(answers_file)
-    os.makedirs(os.path.dirname(answers_file), exist_ok=True)
+    # answers_file = os.path.expanduser(args.answers_file)
+    # if os.path.exists(answers_file):
+    #     os.remove(answers_file)
+    # os.makedirs(os.path.dirname(answers_file), exist_ok=True)
     figure_sizes_file = os.path.expanduser(args.figure_sizes_file)
     responses = {}
     figure_size_info = {}
@@ -514,42 +514,41 @@ if __name__ == "__main__":
             figure_size_info[line_info['image_file']] = line_info['image_features_size']
 
     count = 0
-    with open(answers_file, 'w') as file:
-        for line in tqdm(questions):
-            if args.add_activations == "True":
-                print("adjust activations.")
-                model_helper.reset_all()
-                vec = get_vec(layer, vectors_path)
-                model_helper.set_add_activations(layer, multiplier * vec.cuda())
-            elif args.add_dot_products == "True":
-                print("adjust dot_products.")
-                model_helper.reset_all()
-                vec = get_vec(layer, vectors_path)
-                model_helper.set_calc_dot_product_with(layer, vec.cuda())
+    for line in tqdm(questions):
+        if args.add_activations == "True":
+            print("adjust activations.")
+            model_helper.reset_all()
+            vec = get_vec(layer, vectors_path)
+            model_helper.set_add_activations(layer, multiplier * vec.cuda())
+        elif args.add_dot_products == "True":
+            print("adjust dot_products.")
+            model_helper.reset_all()
+            vec = get_vec(layer, vectors_path)
+            model_helper.set_calc_dot_product_with(layer, vec.cuda())
 
-            idx = line['id']
-            image_file = line['image']
-            prompt = line['prompt']
-            response_from_dataset = line['response_from_dataset']
-            figure_size = figure_size_info[image_file][0]
-            topk = 10
-            print_attn_mech = True
-            print_intermediate_res = True
-            print_mlp = True
-            print_block = True
-            model_helper.decode_all_layers(image_file, prompt, figure_size, topk, print_attn_mech
-                                           , print_intermediate_res, print_mlp, print_block)
-            # output = {"id": idx,
-            #           "image_file": image_file,
-            #           "prompt": prompt,
-            #           "response": res,
-            #           "response_from_dataset": response_from_dataset,
-            #           }
-            # json.dump(output,  file)
-            # file.write('\n')
-            count += 1
-            if count >= 1:
-                break
+        idx = line['id']
+        image_file = line['image']
+        prompt = line['prompt']
+        response_from_dataset = line['response_from_dataset']
+        figure_size = figure_size_info[image_file][0]
+        topk = 10
+        print_attn_mech = True
+        print_intermediate_res = True
+        print_mlp = True
+        print_block = True
+        model_helper.decode_all_layers(image_file, prompt, figure_size, topk, print_attn_mech
+                                       , print_intermediate_res, print_mlp, print_block)
+        # output = {"id": idx,
+        #           "image_file": image_file,
+        #           "prompt": prompt,
+        #           "response": res,
+        #           "response_from_dataset": response_from_dataset,
+        #           }
+        # json.dump(output,  file)
+        # file.write('\n')
+        count += 1
+        if count >= 1:
+            break
     print("Final count is {}".format(count))
 
 
