@@ -38,8 +38,8 @@ def get_chunk(lst, n, k):
     chunks = split_list(lst, n)
     return chunks[k]
 
-def get_vec(layer):
-    return torch.load(f"vectors/vec_layer_{layer}.pt")
+def get_vec(layer, path):
+    return torch.load(f"vectors/{path}/vec_layer_{layer}.pt")
 
 
 
@@ -390,6 +390,7 @@ if __name__ == "__main__":
     parser.add_argument("--adj-layer", type=int, default=8)
     parser.add_argument("--multiplier", type=float, default=0.5)
     parser.add_argument("--figure-sizes-file", type=str, default="figure_sizes.jsonl")
+    parser.add_argument("--vectors-path", type=str, default=None)
 
     args = parser.parse_args()
 
@@ -403,18 +404,19 @@ if __name__ == "__main__":
     layer = args.adj_layer
     multiplier = args.multiplier
     max_new_tokens = args.max_new_tokens
+    vectors_path = args.vectors_path
 
     model_helper.set_save_internal_decodings(False)
 
     if args.add_activations:
         print("adjust activations.")
         model_helper.reset_all()
-        vec = get_vec(layer)
+        vec = get_vec(layer, vectors_path)
         model_helper.set_add_activations(layer, multiplier * vec.cuda())
     elif args.add_dot_products:
         print("adjust dot_products.")
         model_helper.reset_all()
-        vec = get_vec(layer)
+        vec = get_vec(layer, vectors_path)
         model_helper.set_calc_dot_product_with(layer, vec.cuda())
 
 

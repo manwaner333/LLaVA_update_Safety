@@ -19,7 +19,7 @@ import numpy as np
 import pickle
 from io import BytesIO
 from scipy.stats import entropy
-import spacy
+# import spacy
 from transformers import TextStreamer
 import re
 from PIL import Image, ImageFilter
@@ -29,33 +29,6 @@ from sklearn.manifold import TSNE
 
 np.random.seed(42)
 torch.manual_seed(42)
-
-
-# class ComparisonDataset(Dataset):
-#     def __init__(self, data, system_prompt):
-#         self.data = data
-#         self.system_prompt = system_prompt
-#         self.tokenizer = AutoTokenizer.from_pretrained(
-#             "meta-llama/Llama-2-7b-chat-hf"      # , use_auth_token=token
-#         )
-#         self.tokenizer.pad_token = self.tokenizer.eos_token
-#
-#     def __len__(self):
-#         return len(self.data)
-#
-#     def __getitem__(self, idx):
-#         item = self.data[idx]
-#         question = item["question"]
-#         pos_answer = item["answer_matching_behavior"]
-#         neg_answer = item["answer_not_matching_behavior"]
-#         pos_tokens = prompt_to_tokens(
-#             self.tokenizer, self.system_prompt, question, pos_answer
-#         )
-#         neg_tokens = prompt_to_tokens(
-#             self.tokenizer, self.system_prompt, question, neg_answer
-#         )
-#         return pos_tokens, neg_tokens
-
 
 def load_image(image_file, noise_figure):
     if image_file.startswith('http://') or image_file.startswith('https://'):
@@ -77,10 +50,6 @@ class ComparisonDataset(Dataset):
         self.data = data
         self.model_name = model_name
         self.device = device
-        # disable_torch_init()
-        # model_path = os.path.expanduser(args.model_path)
-        # self.model_name = get_model_name_from_path(model_path)
-        # self.tokenizer, self.model, self.image_processor, self.context_len = load_pretrained_model(model_path, args.model_base, self.model_name, args.load_8bit, args.load_4bit, device=args.device)
         self.tokenizer = tokenizer
         self.image_processor = image_processor
 
@@ -90,36 +59,28 @@ class ComparisonDataset(Dataset):
     def __getitem__(self, idx):
         item = self.data[idx]
         image_file = item["image"]
-        question = item["question"]
+        question = item["prompt"]
         pos_answer = item["safe_response"]
         neg_answer = item["unsafe_response"]
         noise_figure = args.noise_figure
 
         image = load_image(os.path.join(args.image_folder, image_file), noise_figure)
 
-        # image_size = image.size
-        # image_tensor = process_images([image], self.image_processor, self.model.config)
-        # if type(image_tensor) is list:
-        #     image_tensor = [image.to(self.model.device, dtype=torch.float16) for image in image_tensor]
-        # else:
-        #     image_tensor = image_tensor.to(self.model.device, dtype=torch.float16)
-
         # load conv
-        # if "llama-2" in self.model_name.lower():
-        #     conv_mode = "llava_llama_2"
-        # elif "mistral" in self.model_name.lower():
-        #     conv_mode = "mistral_instruct"
-        # elif "v1.6-34b" in self.model_name.lower():
-        #     conv_mode = "chatml_direct"
-        # elif "v1" in self.model_name.lower():
-        #     conv_mode = "llava_v1"
-        # elif "mpt" in self.model_name.lower():
-        #     conv_mode = "mpt"
-        # else:
-        #     conv_mode = "llava_v0"
+        if "llama-2" in self.model_name.lower():
+            conv_mode = "llava_llama_2"
+        elif "mistral" in self.model_name.lower():
+            conv_mode = "mistral_instruct"
+        elif "v1.6-34b" in self.model_name.lower():
+            conv_mode = "chatml_direct"
+        elif "v1" in self.model_name.lower():
+            conv_mode = "llava_v1"
+        elif "mpt" in self.model_name.lower():
+            conv_mode = "mpt"
+        else:
+            conv_mode = "llava_v0"
 
-        # conv_mode = "llava_llama_2"
-        conv_mode = "llava_v1"
+
         if args.conv_mode is not None and conv_mode != args.conv_mode:
             print(
                 '[WARNING] the auto inferred conversation mode is {}, while `--conv-mode` is {}, using {}'.format(
@@ -150,7 +111,6 @@ class ComparisonDataset(Dataset):
         pos_input_ids = tokenizer_image_token(pos_prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors='pt').unsqueeze(0).to(
             self.device)
 
-
         return pos_input_ids, neg_input_ids
 
 
@@ -162,6 +122,8 @@ def add_vector_after_position(matrix, vector, position_ids, after=None):
     mask = mask.unsqueeze(-1)
     matrix += mask.float() * vector
     return matrix
+
+
 class BlockOutputWrapper(torch.nn.Module):
     def __init__(self, block, unembed_matrix, norm, tokenizer):
         super().__init__()
@@ -433,20 +395,20 @@ def save_activation_projection_tsne(
     plt.ylabel("t-SNE 2")
     plt.savefig(fname)
 
-def plot_all_activations(layers):
+def plot_all_activations(layers, save_path="aa"):
     if not os.path.exists("clustering"):
         os.mkdir("clustering")
     for layer in layers:
-        pos = torch.load(f"vectors/positive_layer_{layer}.pt")
-        neg = torch.load(f"vectors/negative_layer_{layer}.pt")
+        pos = torch.load(f"vectors/{save_path}/positive_layer_{layer}.pt")
+        neg = torch.load(f"vectors/{save_path}/negative_layer_{layer}.pt")
         save_activation_projection_tsne(
             pos,
             neg,
-            f"clustering/activations_layer_{layer}.png",
+            f"clustering/{save_path}/activations_layer_{layer}.png",
             f"t-SNE projected activations layer {layer}",
         )
 
-def generate_and_save_steering_vectors(model, dataset, start_layer=0, end_layer=32, token_idx=-2):
+def generate_and_save_steering_vectors(model, dataset, start_layer=0, end_layer=32, token_idx=-2, save_path="aa"):
     layers = list(range(start_layer, end_layer + 1))
     positive_activations = dict([(layer, []) for layer in layers])
     negative_activations = dict([(layer, []) for layer in layers])
@@ -471,9 +433,9 @@ def generate_and_save_steering_vectors(model, dataset, start_layer=0, end_layer=
         positive = torch.stack(positive_activations[layer])
         negative = torch.stack(negative_activations[layer])
         vec = (positive - negative).mean(dim=0)
-        torch.save(vec, f"vectors/vec_layer_{layer}.pt")
-        torch.save(positive, f"vectors/positive_layer_{layer}.pt")
-        torch.save(negative, f"vectors/negative_layer_{layer}.pt",)
+        torch.save(vec, f"vectors/{save_path}/vec_layer_{layer}.pt")
+        torch.save(positive, f"vectors/{save_path}/positive_layer_{layer}.pt")
+        torch.save(negative, f"vectors/{save_path}/negative_layer_{layer}.pt")
 
 
 
@@ -516,10 +478,11 @@ if __name__ == "__main__":
     dataset = ComparisonDataset(data, model.tokenizer, model.image_processor, model.model_name, model.device)
     print(f"Using {len(dataset)} samples")
 
+    save_path = args.model_path.split("/")[-1] + "_" + args.question_file.split("/")[-1].split(".")[0]
     start_layer = args.start_layer
     end_layer = args.end_layer
-    generate_and_save_steering_vectors(model, dataset, start_layer=start_layer, end_layer=end_layer)
-    plot_all_activations(list(range(start_layer, end_layer + 1)))
+    generate_and_save_steering_vectors(model, dataset, start_layer=start_layer, end_layer=end_layer, save_path=save_path)
+    plot_all_activations(list(range(start_layer, end_layer + 1)), save_path=save_path)
 
 
 
