@@ -24,6 +24,8 @@ import re
 from PIL import Image, ImageFilter
 from matplotlib import pyplot as plt
 from matplotlib.ticker import ScalarFormatter
+# from IPython.display import display, HTML
+import matplotlib
 
 np.random.seed(42)
 torch.manual_seed(42)
@@ -41,6 +43,35 @@ def get_chunk(lst, n, k):
 def get_vec(layer, path):
     return torch.load(f"vectors/{path}/vec_layer_{layer}.pt")
 
+
+def value_to_color(value, cmap=plt.cm.RdBu, vmin=-25, vmax=25):
+    # Convert value to a range between 0 and 1
+    norm = plt.Normalize(vmin=vmin, vmax=vmax)
+    rgba = cmap(norm(value))
+    return matplotlib.colors.to_hex(rgba)
+
+
+def display_token_dot_products(data):
+    html_content = ""
+    vmin = min([x[1] for x in data])
+    vmax = max([x[1] for x in data])
+    for token, value in data:
+        color = value_to_color(value, vmin=vmin, vmax=vmax)
+        html_content += f"<span style='background-color: {color}; padding: 2px 5px; margin: 2px; border-radius: 3px;'>{token} ({value:.4f})</span>"
+    # display(HTML(html_content))
+
+
+def display_token_dot_products_final_text(data, text, tokenizer):
+    html_content = "<div>"
+    vmin = min([x[1] for x in data])
+    vmax = max([x[1] for x in data])
+    tokens = tokenizer.encode(text)
+    tokens = tokenizer.batch_decode(torch.tensor(tokens).unsqueeze(-1))
+    for idx, (_, value) in enumerate(data):
+        color = value_to_color(value, vmin=vmin, vmax=vmax)
+        html_content += f"<span style='background-color: {color}; padding: 2px 5px; margin: 2px; border-radius: 3px;'>{tokens[idx].strip()} ({value:.4f})</span>"
+    html_content += "</div>"
+    # display(HTML(html_content))
 
 
 def load_image(image_file, noise_figure):
@@ -385,8 +416,8 @@ if __name__ == "__main__":
     parser.add_argument("--load-8bit", action="store_true")
     parser.add_argument("--load-4bit", action="store_true")
     parser.add_argument("--device", type=str, default="cuda")
-    parser.add_argument("--add-activations", type=bool, default=False)
-    parser.add_argument("--add-dot-products", type=bool, default=False)
+    parser.add_argument("--add-activations", type=str, default=None)
+    parser.add_argument("--add-dot-products", type=str, default=None)
     parser.add_argument("--adj-layer", type=int, default=8)
     parser.add_argument("--multiplier", type=float, default=0.5)
     parser.add_argument("--figure-sizes-file", type=str, default="figure_sizes.jsonl")
@@ -408,18 +439,6 @@ if __name__ == "__main__":
 
     model_helper.set_save_internal_decodings(False)
 
-    if args.add_activations:
-        print("adjust activations.")
-        model_helper.reset_all()
-        vec = get_vec(layer, vectors_path)
-        model_helper.set_add_activations(layer, multiplier * vec.cuda())
-    elif args.add_dot_products:
-        print("adjust dot_products.")
-        model_helper.reset_all()
-        vec = get_vec(layer, vectors_path)
-        model_helper.set_calc_dot_product_with(layer, vec.cuda())
-
-
     questions = [json.loads(q) for q in open(os.path.expanduser(args.question_file), "r")]
     questions = get_chunk(questions, args.num_chunks, args.chunk_idx)
     answers_file = os.path.expanduser(args.answers_file)
@@ -438,12 +457,23 @@ if __name__ == "__main__":
     count = 0
     with open(answers_file, 'w') as file:
         for line in tqdm(questions):
+            if args.add_activations == "True":
+                print("adjust activations.")
+                model_helper.reset_all()
+                vec = get_vec(layer, vectors_path)
+                model_helper.set_add_activations(layer, multiplier * vec.cuda())
+            elif args.add_dot_products == "True":
+                print("adjust dot_products.")
+                model_helper.reset_all()
+                vec = get_vec(layer, vectors_path)
+                model_helper.set_calc_dot_product_with(layer, vec.cuda())
+
             idx = line['id']
             image_file = line['image']
             prompt = line['prompt']
             response_from_dataset = line['response_from_dataset']
             figure_size = figure_size_info[image_file][0]
-            res = model_helper.generate_text(image_file, prompt, figure_size, max_new_tokens=10)
+            res = model_helper.generate_text(image_file, prompt, figure_size, max_new_tokens=max_new_tokens)
             output = {"id": idx,
                       "image_file": image_file,
                       "prompt": prompt,
@@ -453,7 +483,12 @@ if __name__ == "__main__":
             json.dump(output,  file)
             file.write('\n')
             count += 1
+            if count > 300:
+                break
     print("Final count is {}".format(count))
+
+
+
 
 
 
