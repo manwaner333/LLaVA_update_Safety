@@ -468,17 +468,27 @@ if __name__ == "__main__":
                 vec = get_vec(layer, vectors_path)
                 model_helper.set_calc_dot_product_with(layer, vec.cuda())
 
-            idx = line['id']
+            idx = line['idx']
+            id = line['id']
+            safe = line['safe']
+            harmful_category = line['harmful_category']
+            harmful_subcategory = line["harmful_subcategory"]
             image_file = line['image']
             prompt = line['prompt']
-            response_from_dataset = line['response_from_dataset']
+            res_from_dataset = line['response']
+
+            # response_from_dataset = line['response_from_dataset']
             figure_size = figure_size_info[image_file][0]
             res = model_helper.generate_text(image_file, prompt, figure_size, max_new_tokens=max_new_tokens)
-            output = {"id": idx,
+            output = {"idx": idx,
+                      'id': id,
+                      "safe": safe,
+                      "harmful_category": harmful_category,
+                      "harmful_subcategory": harmful_subcategory,
                       "image_file": image_file,
                       "prompt": prompt,
                       "response": res,
-                      "response_from_dataset": response_from_dataset,
+                      "response_from_dataset": res_from_dataset,
                       }
             json.dump(output,  file)
             file.write('\n')
