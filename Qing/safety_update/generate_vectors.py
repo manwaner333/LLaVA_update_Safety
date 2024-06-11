@@ -26,6 +26,7 @@ from PIL import Image, ImageFilter
 from matplotlib import pyplot as plt
 from matplotlib.ticker import ScalarFormatter
 from sklearn.manifold import TSNE
+from sklearn.decomposition import PCA
 
 np.random.seed(42)
 torch.manual_seed(42)
@@ -83,6 +84,8 @@ class BlockOutputWrapper(torch.nn.Module):
 
     def forward(self, *args, **kwargs):
         output = self.block(*args, **kwargs)
+        # print(output[0])
+        # print(output[0].shape)
         self.activations = output[0]
         if self.calc_dot_product_with is not None:
             last_token_activations = self.activations[0, -1, :]
@@ -207,7 +210,7 @@ class ModelHelper:
 def save_activation_projection_tsne(
     activations1,
     activations2,
-    activation3,
+    activations3,
     fname,
     title,
     label1="Unsafe",
@@ -222,16 +225,18 @@ def save_activation_projection_tsne(
     Colors projected activations1 as blue and projected activations2 as red.
     """
     plt.clf()
-    activations_np = np.concatenate((np.array(activations1), np.array(activations2), np.array(activation3)), axis=0)
+    activations_np = np.concatenate((np.array(activations1), np.array(activations2), np.array(activations3)), axis=0).astype(np.float16)
 
     # t-SNE transformation
-    tsne = TSNE(n_components=2, n_iter=100)
-    projected_activations = tsne.fit_transform(activations_np)
-
+    tsne = TSNE(n_components=2)
+    projected_activations = tsne.fit_transform(np.array(activations_np))
+    len1 = np.array(activations1).shape[0]
+    len2 = np.array(activations2).shape[0]
+    len3 = np.array(activations3).shape[0]
     # Splitting back into activations1 and activations2
-    activations1_projected = projected_activations[0:activations1.shape[0]]
-    activations2_projected = projected_activations[activations1.shape[0]:(activations1.shape[0] + activations2.shape[0])]
-    activations3_projected = projected_activations[(activations1.shape[0]+activations2.shape[0]):-1]
+    activations1_projected = projected_activations[0:len1, :]
+    activations2_projected = projected_activations[len1:len1+len2, :]
+    activations3_projected = projected_activations[len1+len2:, :]
 
     # Visualization
     for x, y in activations1_projected:
@@ -239,6 +244,9 @@ def save_activation_projection_tsne(
 
     for x, y in activations2_projected:
         plt.scatter(x, y, color="red", marker="o", alpha=0.4)
+
+    for x, y in activations3_projected:
+        plt.scatter(x, y, color="green", marker="o", alpha=0.4)
 
     # Adding the legend
     scatter1 = plt.Line2D(
@@ -260,69 +268,60 @@ def save_activation_projection_tsne(
         label=label2,
     )
 
-    plt.legend(handles=[scatter1, scatter2])
+    scatter3 = plt.Line2D(
+        [0],
+        [0],
+        marker="o",
+        color="w",
+        markerfacecolor="green",
+        markersize=10,
+        label=label3,
+    )
+
+    plt.legend(handles=[scatter1, scatter2, scatter3])
     plt.title(title)
     plt.xlabel("t-SNE 1")
     plt.ylabel("t-SNE 2")
-    plt.show()
-    # plt.savefig(fname)
+    # plt.show()
+    plt.savefig(fname)
 
-def plot_all_activations(layers, activations_file="aa"):
+def plot_all_activations(layers, activations_file="aa.json", save_path="b"):
     unsafe_activations = []
     safe_safe_activations = []
     safe_unsafe_activations = []
+    if not os.path.exists(f"clustering/{save_path}"):
+        os.mkdir(f"clustering/{save_path}")
 
-    for layer in [8]:
+
+
+    for layer in layers:
         with open(activations_file, "r") as f:
             for line in f:
-                try:
-                    item = json.loads(line)
-                    idx = item['idx']
-                    print(idx)
-                    id = item['id']
-                    image_file = item["image_file"]
-                    safe = item["safe"]
-                    harmful_category = item['harmful_category']
-                    harmful_subcategory = item['harmful_subcategory']
-                    prompt = item["prompt"]
-                    activations_layer = item["activations"][str(layer)][0][0]
-                    if safe == "unsafe":
-                        unsafe_activations.append(activations_layer)
-                    elif safe == "safe_unsafe":
-                        safe_unsafe_activations.append(activations_layer)
-                    elif safe == "safe_safe":
-                        safe_safe_activations.append(activations_layer)
+                item = json.loads(line)
+                idx = item['idx']
+                print(idx)
+                id = item['id']
+                image_file = item["image_file"]
+                safe = item["safe"]
+                harmful_category = item['harmful_category']
+                harmful_subcategory = item['harmful_subcategory']
+                prompt = item["prompt"]
+                activations_layer = item["activations"][str(layer)][0]
+                if safe == "unsafe":
+                    unsafe_activations.append(activations_layer)
+                elif safe == "safe_unsafe":
+                    safe_unsafe_activations.append(activations_layer)
+                elif safe == "safe_safe":
+                    safe_safe_activations.append(activations_layer)
 
-                    if idx > 100:
-                        break
-                except json.JSONDecodeError as e:
-                    break
-        save_activation_projection_tsne(unsafe_activations, safe_unsafe_activations, safe_safe_activations, f"clustering/activations_layer_{layer}.png", title=f"t-SNE projected activations layer {layer}")
-
-
-
-
-
-
-
-    # if not os.path.exists(f"clustering/{save_path}"):
-    #     os.mkdir(f"clustering/{save_path}")
-    # for layer in layers:
-    #     pos = torch.load(f"vectors/{save_path}/positive_layer_{layer}.pt")
-    #     neg = torch.load(f"vectors/{save_path}/negative_layer_{layer}.pt")
-    #     save_activation_projection_tsne(
-    #         pos,
-    #         neg,
-    #         f"clustering/{save_path}/activations_layer_{layer}.png",
-    #         f"t-SNE projected activations layer {layer}",
-    #     )
+        save_activation_projection_tsne(unsafe_activations, safe_unsafe_activations, safe_safe_activations
+                                        , fname=f"clustering/{save_path}/activations_layer_{layer}.png"
+                                        , title=f"t-SNE projected activations layer {layer}"
+                                        )
 
 
 
 def generate_and_save_steering_vectors(model_helper, dataset, start_layer=0, end_layer=32):
-    token_idx = -2,
-    layers = list(range(start_layer, end_layer + 1))
-    activations = dict([(layer, []) for layer in layers])
     model_name = model_helper.model_name
     model_helper.set_save_internal_decodings(False)
     model_helper.reset_all()
@@ -332,7 +331,11 @@ def generate_and_save_steering_vectors(model_helper, dataset, start_layer=0, end
     os.makedirs(os.path.dirname(answers_file), exist_ok=True)
     with open(answers_file, 'w') as file:
         for item in dataset:
+            token_idx = -2
+            layers = list(range(start_layer, end_layer + 1))
+            activations = dict([(layer, []) for layer in layers])
             idx = item['idx']
+            print(idx)
             id = item['id']
             image_file = item["image"]
             safe = item["safe"]
@@ -384,6 +387,7 @@ def generate_and_save_steering_vectors(model_helper, dataset, start_layer=0, end
             conv.append_message(conv.roles[0], inp)
             in_prompt = conv.get_prompt()
             input_ids = (tokenizer_image_token(in_prompt, model_helper.tokenizer, IMAGE_TOKEN_INDEX, return_tensors='pt').unsqueeze(0).to(model_helper.model.device))
+            # print(input_ids)
             model_helper.reset_all()
             model_helper.get_logits(input_ids, images=image_tensor, image_sizes=image_size)
             for layer in layers:
@@ -403,7 +407,9 @@ def generate_and_save_steering_vectors(model_helper, dataset, start_layer=0, end
                       }
             json.dump(output, file)
             file.write('\n')
-            print(idx)
+            # if idx > 30:
+            #     break
+
 
 
 
@@ -438,20 +444,21 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # model_helper = ModelHelper(args)
-    #
-    # question_file = os.path.expanduser(args.question_file)
-    # data = []
-    # with open(question_file, "r") as f:
-    #     for line in f:
-    #         data.append(json.loads(line))
+    model_helper = ModelHelper(args)
+
+    question_file = os.path.expanduser(args.question_file)
+    data = []
+    with open(question_file, "r") as f:
+        for line in f:
+            data.append(json.loads(line))
 
     start_layer = args.start_layer
     end_layer = args.end_layer
     # generate activations
-    # generate_and_save_steering_vectors(model_helper, data, start_layer=start_layer, end_layer=end_layer)
+    generate_and_save_steering_vectors(model_helper, data, start_layer=start_layer, end_layer=end_layer)
     # analysis activations
-    plot_all_activations(list(range(start_layer, end_layer + 1)), activations_file=args.answers_file)
+    save_path = args.model_path.split("/")[-1] + "_" + args.question_file.split("/")[-1].split(".")[0]
+    plot_all_activations(list(range(start_layer, end_layer + 1)), activations_file=args.answers_file, save_path=save_path)
 
 
 
