@@ -36,11 +36,15 @@ def save_activation_projection_tsne(
     activations1,
     activations2,
     activations3,
+    activations4,
+    activations5,
     fname,
     title,
     label1="Unsafe",
     label2="Safe_unsafe",
     label3="Safe_safe",
+    label4="safebench_with",
+    label5="safebench_without"
 ):
     """
     activations1: n_samples x vector dim tensor
@@ -50,7 +54,7 @@ def save_activation_projection_tsne(
     Colors projected activations1 as blue and projected activations2 as red.
     """
     plt.clf()
-    activations_np = np.concatenate((np.array(activations1), np.array(activations2), np.array(activations3)), axis=0).astype(np.float16)
+    activations_np = np.concatenate((np.array(activations1), np.array(activations2), np.array(activations3), np.array(activations4), np.array(activations5)), axis=0).astype(np.float16)
 
     # t-SNE transformation
     tsne = TSNE(n_components=2)
@@ -58,10 +62,14 @@ def save_activation_projection_tsne(
     len1 = np.array(activations1).shape[0]
     len2 = np.array(activations2).shape[0]
     len3 = np.array(activations3).shape[0]
+    len4 = np.array(activations4).shape[0]
+    len5 = np.array(activations5).shape[0]
     # Splitting back into activations1 and activations2
     activations1_projected = projected_activations[0:len1, :]
     activations2_projected = projected_activations[len1:len1+len2, :]
-    activations3_projected = projected_activations[len1+len2:, :]
+    activations3_projected = projected_activations[len1+len2:len1+len2+len3, :]
+    activations4_projected = projected_activations[len1+len2+len3:len1+len2+len3+len4, :]
+    activations5_projected = projected_activations[len1 + len2 + len3 + len4:, :]
 
     # Visualization
     for x, y in activations1_projected:
@@ -72,6 +80,12 @@ def save_activation_projection_tsne(
 
     for x, y in activations3_projected:
         plt.scatter(x, y, color="green", marker="o", alpha=0.4)
+
+    for x, y in activations4_projected:
+        plt.scatter(x, y, color="orange", marker="o", alpha=0.4)
+
+    for x, y in activations5_projected:
+        plt.scatter(x, y, color="pink", marker="o", alpha=0.4)
 
     # Adding the legend
     scatter1 = plt.Line2D(
@@ -103,14 +117,34 @@ def save_activation_projection_tsne(
         label=label3,
     )
 
-    plt.legend(handles=[scatter1, scatter2, scatter3])
+    scatter4 = plt.Line2D(
+        [0],
+        [0],
+        marker="o",
+        color="w",
+        markerfacecolor="orange",
+        markersize=10,
+        label=label4,
+    )
+
+    scatter5 = plt.Line2D(
+        [0],
+        [0],
+        marker="o",
+        color="w",
+        markerfacecolor="pink",
+        markersize=10,
+        label=label5,
+    )
+
+    plt.legend(handles=[scatter1, scatter2, scatter3, scatter4, scatter5], loc='upper center', bbox_to_anchor=(0.4, 1.18), ncol=3)
     plt.title(title)
     plt.xlabel("t-SNE 1")
     plt.ylabel("t-SNE 2")
     # plt.show()
     plt.savefig(fname)
 
-def extract_activations(layer, activations_file="aa.json"):
+def extract_activations_for_vlguard(layer, activations_file="aa.json"):
     unsafe_activations = []
     safe_safe_activations = []
     safe_unsafe_activations = []
@@ -137,6 +171,27 @@ def extract_activations(layer, activations_file="aa.json"):
     return unsafe_activations, safe_unsafe_activations, safe_safe_activations
 
 
+def extract_activations_for_safebench(layer, activations_file="aa.json"):
+    res = []
+
+    with open(activations_file, "r") as f:
+        for line in f:
+            item = json.loads(line)
+            idx = item['idx']
+            print(idx)
+            id = item['id']
+            image_file = item["image_file"]
+            safe = item["safe"]
+            harmful_category = item['harmful_category']
+            harmful_subcategory = item['harmful_subcategory']
+            prompt = item["prompt"]
+            activations_layer = item["activations"][str(layer)][0]
+
+            res.append(activations_layer)
+
+    return res
+
+
 
 
 
@@ -153,12 +208,16 @@ if __name__ == "__main__":
     for layer in layers:
         # vlguard
         answers_vlguard_file = "playground/data/vlguard/train_filter_activations.json"
-        unsafe_activations, safe_unsafe_activations, safe_safe_activations = extract_activations(layer, activations_file=answers_vlguard_file)
+        unsafe_activations, safe_unsafe_activations, safe_safe_activations = extract_activations_for_vlguard(layer, activations_file=answers_vlguard_file)
 
+        answers_safebench_with_image = "playground/data/safebench/safebench_activations.json"
+        safebench_with_images = extract_activations_for_safebench(layer, activations_file=answers_safebench_with_image)
+
+        answers_safebench_without_image = "playground/data/safebench/safebench_activations_without_image.json"
+        safebench_without_images = extract_activations_for_safebench(layer, activations_file=answers_safebench_without_image)
 
 
         fname = f"clustering/{save_path}/activations_layer_{layer}.png"
         title = f"t-SNE projected activations layer {layer}"
-        save_activation_projection_tsne(unsafe_activations, safe_unsafe_activations, safe_safe_activations
-                                        , fname=fname
-                                        , title=title)
+        save_activation_projection_tsne(unsafe_activations, safe_unsafe_activations, safe_safe_activations, safebench_with_images,
+                                        safebench_without_images, fname=fname, title=title)
