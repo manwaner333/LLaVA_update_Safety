@@ -197,7 +197,7 @@ def extract_activations_for_safebench(layer, activations_file="aa.json"):
 
 if __name__ == "__main__":
     # analysis activations
-    save_path = "llava-v1.5-7b_train_filter_for_new_vector"
+    save_path = "llava-v1.5-7b_for_new_vector"
     if not os.path.exists(f"clustering/{save_path}"):
         os.mkdir(f"clustering/{save_path}")
 
@@ -210,10 +210,10 @@ if __name__ == "__main__":
         answers_vlguard_file = "playground/data/vlguard/train_filter_activations.json"
         unsafe_activations, safe_unsafe_activations, safe_safe_activations = extract_activations_for_vlguard(layer, activations_file=answers_vlguard_file)
 
-        answers_safebench_with_image = "playground/data/safebench/safebench_activations.json"
+        answers_safebench_with_image = "playground/data/safebench/llava-v1.5-7b_safebench_activations.json"
         safebench_with_images = extract_activations_for_safebench(layer, activations_file=answers_safebench_with_image)
 
-        answers_safebench_without_image = "playground/data/safebench/safebench_activations_without_image.json"
+        answers_safebench_without_image = "playground/data/safebench/llava-v1.5-7b_safebench_activations_without_image.json"
         safebench_without_images = extract_activations_for_safebench(layer, activations_file=answers_safebench_without_image)
 
 
