@@ -207,118 +207,6 @@ class ModelHelper:
 
 
 
-def save_activation_projection_tsne(
-    activations1,
-    activations2,
-    activations3,
-    fname,
-    title,
-    label1="Unsafe",
-    label2="Safe_unsafe",
-    label3="Safe_safe",
-):
-    """
-    activations1: n_samples x vector dim tensor
-    activations2: n_samples x vector dim tensor
-
-    projects to n_samples x 2 dim tensor using t-SNE (over the full dataset of both activations 1 and 2) and saves visualization.
-    Colors projected activations1 as blue and projected activations2 as red.
-    """
-    plt.clf()
-    activations_np = np.concatenate((np.array(activations1), np.array(activations2), np.array(activations3)), axis=0).astype(np.float16)
-
-    # t-SNE transformation
-    tsne = TSNE(n_components=2)
-    projected_activations = tsne.fit_transform(np.array(activations_np))
-    len1 = np.array(activations1).shape[0]
-    len2 = np.array(activations2).shape[0]
-    len3 = np.array(activations3).shape[0]
-    # Splitting back into activations1 and activations2
-    activations1_projected = projected_activations[0:len1, :]
-    activations2_projected = projected_activations[len1:len1+len2, :]
-    activations3_projected = projected_activations[len1+len2:, :]
-
-    # Visualization
-    for x, y in activations1_projected:
-        plt.scatter(x, y, color="blue", marker="o", alpha=0.4)
-
-    for x, y in activations2_projected:
-        plt.scatter(x, y, color="red", marker="o", alpha=0.4)
-
-    for x, y in activations3_projected:
-        plt.scatter(x, y, color="green", marker="o", alpha=0.4)
-
-    # Adding the legend
-    scatter1 = plt.Line2D(
-        [0],
-        [0],
-        marker="o",
-        color="w",
-        markerfacecolor="blue",
-        markersize=10,
-        label=label1,
-    )
-    scatter2 = plt.Line2D(
-        [0],
-        [0],
-        marker="o",
-        color="w",
-        markerfacecolor="red",
-        markersize=10,
-        label=label2,
-    )
-
-    scatter3 = plt.Line2D(
-        [0],
-        [0],
-        marker="o",
-        color="w",
-        markerfacecolor="green",
-        markersize=10,
-        label=label3,
-    )
-
-    plt.legend(handles=[scatter1, scatter2, scatter3])
-    plt.title(title)
-    plt.xlabel("t-SNE 1")
-    plt.ylabel("t-SNE 2")
-    # plt.show()
-    plt.savefig(fname)
-
-def plot_all_activations(layers, activations_file="aa.json", save_path="b"):
-    unsafe_activations = []
-    safe_safe_activations = []
-    safe_unsafe_activations = []
-    if not os.path.exists(f"clustering/{save_path}"):
-        os.mkdir(f"clustering/{save_path}")
-
-
-
-    for layer in layers:
-        with open(activations_file, "r") as f:
-            for line in f:
-                item = json.loads(line)
-                idx = item['idx']
-                print(idx)
-                id = item['id']
-                image_file = item["image_file"]
-                safe = item["safe"]
-                harmful_category = item['harmful_category']
-                harmful_subcategory = item['harmful_subcategory']
-                prompt = item["prompt"]
-                activations_layer = item["activations"][str(layer)][0]
-                if safe == "unsafe":
-                    unsafe_activations.append(activations_layer)
-                elif safe == "safe_unsafe":
-                    safe_unsafe_activations.append(activations_layer)
-                elif safe == "safe_safe":
-                    safe_safe_activations.append(activations_layer)
-
-        save_activation_projection_tsne(unsafe_activations, safe_unsafe_activations, safe_safe_activations
-                                        , fname=f"clustering/{save_path}/activations_layer_{layer}.png"
-                                        , title=f"t-SNE projected activations layer {layer}"
-                                        )
-
 
 
 def generate_and_save_steering_vectors(model_helper, dataset, start_layer=0, end_layer=32):
@@ -456,9 +344,8 @@ if __name__ == "__main__":
     end_layer = args.end_layer
     # generate activations
     generate_and_save_steering_vectors(model_helper, data, start_layer=start_layer, end_layer=end_layer)
-    # analysis activations
-    save_path = args.model_path.split("/")[-1] + "_" + args.question_file.split("/")[-1].split(".")[0]
-    plot_all_activations(list(range(start_layer, end_layer + 1)), activations_file=args.answers_file, save_path=save_path)
+
+
 
 
 
