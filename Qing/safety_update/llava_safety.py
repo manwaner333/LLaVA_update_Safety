@@ -493,8 +493,8 @@ if __name__ == "__main__":
             json.dump(output,  file)
             file.write('\n')
             count += 1
-            if count > 300:
-                break
+            # if count > 300:
+            #     break
     print("Final count is {}".format(count))
 
 
