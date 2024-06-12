@@ -54,7 +54,6 @@ def save_activation_projection_tsne(
     Colors projected activations1 as blue and projected activations2 as red.
     """
     plt.clf()
-    plt.figure(figsize=(8, 7))
     activations_np = np.concatenate((np.array(activations1), np.array(activations2), np.array(activations3), np.array(activations4), np.array(activations5)), axis=0).astype(np.float16)
 
     # t-SNE transformation
@@ -86,7 +85,7 @@ def save_activation_projection_tsne(
         plt.scatter(x, y, color="orange", marker="o", alpha=0.4)
 
     for x, y in activations5_projected:
-        plt.scatter(x, y, color="c", marker="o", alpha=0.4)
+        plt.scatter(x, y, color="pink", marker="o", alpha=0.4)
 
     # Adding the legend
     scatter1 = plt.Line2D(
@@ -133,14 +132,13 @@ def save_activation_projection_tsne(
         [0],
         marker="o",
         color="w",
-        markerfacecolor="c",
+        markerfacecolor="pink",
         markersize=10,
         label=label5,
     )
 
     # plt.legend(handles=[scatter1, scatter2, scatter3, scatter4, scatter5], loc='upper center', bbox_to_anchor=(0.4, 1.18), ncol=3)
-    legend = plt.legend(handles=[scatter1, scatter2, scatter3, scatter4, scatter5], loc='upper center', bbox_to_anchor=(0.45, 1.16), ncol=3)
-    legend.get_frame().set_alpha(0.3)
+    plt.legend(handles=[scatter1, scatter2, scatter3, scatter4, scatter5], loc='upper center', bbox_to_anchor=(0.4, 1.18), ncol=5)
     plt.title(title)
     plt.xlabel("t-SNE 1")
     plt.ylabel("t-SNE 2")
@@ -220,7 +218,6 @@ def save_activation_projection_tsne_for_vlguard(
         label=label3,
     )
 
-
     plt.legend(handles=[scatter1, scatter2, scatter3], loc='upper center', bbox_to_anchor=(0.47, 1.16), ncol=3)
     plt.title(title)
     plt.xlabel("t-SNE 1")
@@ -281,7 +278,7 @@ def extract_activations_for_safebench(layer, activations_file="aa.json"):
 
 if __name__ == "__main__":
     # analysis activations
-    save_path = "llava_v1.5_7b_vlguard_train_instructions"
+    save_path = "llava_v1.6_vicuna_7b_vlguard_train_instructions"
     if not os.path.exists(f"clustering/{save_path}"):
         os.mkdir(f"clustering/{save_path}")
 
@@ -291,19 +288,12 @@ if __name__ == "__main__":
 
     for layer in layers:
         # vlguard
-        answers_vlguard_file = "playground/data/vlguard/train_filter_activations.json"
+        answers_vlguard_file = "playground/data/vlguard/llava_v1.6_vicuna_7b_train_filter_activations.json"
         unsafe_activations, safe_unsafe_activations, safe_safe_activations = extract_activations_for_vlguard(layer, activations_file=answers_vlguard_file)
-
-        # answers_safebench_with_image = "playground/data/safebench/llava-v1.5-7b_safebench_activations.json"
-        answers_safebench_with_image = "playground/data/safebench/safebench_activations.json"
-        safebench_with_images = extract_activations_for_safebench(layer, activations_file=answers_safebench_with_image)
-
-        # answers_safebench_without_image = "playground/data/safebench/llava-v1.5-7b_safebench_activations_without_image.json"
-        answers_safebench_without_image = "playground/data/safebench/safebench_activations_without_image.json"
-        safebench_without_images = extract_activations_for_safebench(layer, activations_file=answers_safebench_without_image)
-
 
         fname = f"clustering/{save_path}/activations_layer_{layer}.png"
         title = f"t-SNE projected activations layer {layer}"
-        save_activation_projection_tsne(unsafe_activations, safe_unsafe_activations, safe_safe_activations, safebench_with_images,
-                                        safebench_without_images, fname=fname, title=title)
+
+        # save vlguard
+        save_activation_projection_tsne_for_vlguard(unsafe_activations, safe_unsafe_activations, safe_safe_activations,
+                                                    fname=fname, title=title)
