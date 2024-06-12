@@ -207,8 +207,6 @@ class ModelHelper:
 
 
 
-
-
 def generate_and_save_steering_vectors(model_helper, dataset, start_layer=0, end_layer=32):
     model_name = model_helper.model_name
     model_helper.set_save_internal_decodings(False)
@@ -295,8 +293,6 @@ def generate_and_save_steering_vectors(model_helper, dataset, start_layer=0, end
                       }
             json.dump(output, file)
             file.write('\n')
-            # if idx > 30:
-            #     break
 
 
 
