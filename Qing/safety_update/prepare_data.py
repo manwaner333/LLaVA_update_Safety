@@ -5,8 +5,9 @@ import os
 
 prepare_vlguard_for_vectors = False
 prepare_vlguard_for_test = False
-prepare_vlguard_for_train = True
+prepare_vlguard_for_train = False
 prepare_safebench_for_test = False
+prepare_lm_for_vectors = True
 
 
 # if fil_vlguard_for_vectors:
@@ -149,7 +150,28 @@ if prepare_vlguard_for_train:
                     #     break
 
 
-
+if prepare_lm_for_vectors:
+    data_file = "playground/data/lm/refusal_data_A_B.json"
+    filter_data_file = os.path.expanduser("playground/data/lm/ready_lm_neg.json")  # playground/data/lm/ready_lm_pos.json
+    if os.path.exists(filter_data_file):
+        os.remove(filter_data_file)
+    idx = 0
+    with open(filter_data_file, 'w') as file:
+        with open(data_file, "r") as f:
+            json_list = json.load(f)
+            for line in json_list:
+                id = idx
+                idx = idx
+                image = "query_ForbidQI_1_1_6.png"
+                question = line['question']
+                pos_response = line['answer_matching_behavior']
+                neg_response = line["answer_not_matching_behavior"]
+                json.dump({'idx': idx, 'id': id, 'image': image, "safe": "no_image",
+                           "harmful_category": None, "harmful_subcategory": None,
+                           'prompt': question, 'response': neg_response}, file)  # pos_response
+                file.write('\n')
+                idx += 1
+                print(idx)
 
 
 # if fil_vlguard_for_vectors:
