@@ -50,7 +50,7 @@ def save_activation_projection_tsne_for_safebench(
     Colors projected activations1 as blue and projected activations2 as red.
     """
     plt.clf()
-    activations_np = np.concatenate((np.array(activations1), np.array(activations2), np.array(activations3)), axis=0).astype(np.float16)
+    activations_np = np.concatenate((np.array(activations1), np.array(activations2)), axis=0).astype(np.float16)
 
     # t-SNE transformation
     tsne = TSNE(n_components=2)
@@ -67,6 +67,11 @@ def save_activation_projection_tsne_for_safebench(
 
     for x, y in activations2_projected:
         plt.scatter(x, y, color="red", marker="o", alpha=0.4)
+
+    # for i, txt in enumerate(range(len1)):
+    #     plt.annotate(txt, (projected_activations[i, 0], projected_activations[i, 1]), fontsize=8)
+    # for i, txt in enumerate(range(len1, len1+len2)):
+    #     plt.annotate(txt, (projected_activations[i, 0], projected_activations[i, 1]), fontsize=8)
 
 
     # Adding the legend
@@ -94,8 +99,108 @@ def save_activation_projection_tsne_for_safebench(
     plt.title(title)
     plt.xlabel("t-SNE 1")
     plt.ylabel("t-SNE 2")
+    plt.show()
+    # plt.savefig(fname)
+
+
+def save_activation_projection_tsne_for_safebench_only_oneset(
+    activations1,
+    fname,
+    title,
+    label1="with_image",
+    label2="without_image",
+):
+    """
+    activations1: n_samples x vector dim tensor
+    activations2: n_samples x vector dim tensor
+
+    projects to n_samples x 2 dim tensor using t-SNE (over the full dataset of both activations 1 and 2) and saves visualization.
+    Colors projected activations1 as blue and projected activations2 as red.
+    """
+    plt.clf()
+    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+
+    activations_np = np.array(activations1).astype(np.float16)
+    # t-SNE transformation
+    tsne = TSNE(n_components=2)
+    projected_activations = tsne.fit_transform(np.array(activations_np))
+    len1 = np.array(activations1).shape[0]
+    # Splitting back into activations1 and activations2
+    activations1_projected = projected_activations[0:len1, :]
+
+
+    # Visualization
+    for x, y in activations1_projected:
+        axes[0].scatter(x, y, color="blue", marker="o", alpha=0.4)
+
+    flags = [True, False, False, False, True, True, False, False, False, True, False, True, True, False, True, True, False,
+     True, True, False, True, True, True, True, True, False, True, True, False, True, True, True, True, False, False,
+     True, True, False, False, False, True, True, False, True, True, False, False, False, False, False, False, False,
+     False, False, False, True, False, False, False, False, True, True, False, False, False, True, False, False, True,
+     False, False, False, False, False, True, False, False, False, False, False, False, False, False, False, False,
+     True, False, False, True, True, False, True, False, True, True, True, False, False, False, True, True, True, True,
+     True, True, True, False, True, False, False, True, True, False, True, True, True, True, False, False, False, True,
+     False, True, True, False, True, False, True, True, True, True, False, False, False, True, False, False, True, True,
+     False, False, True, True, True, False, True, True, False, False, True, False, False, False, False, False, False,
+     True, True, False, False, False, True, False, False, True, False, True, False, False, False, False, True, True,
+     False, False, False, True, False, True, True, True, True, False, False, True, True, False, False, False, False,
+     False, False, False, True, False, False, False, False, False, False, False, True, False, True, False, False, False,
+     False, False, True, False, True, False, False, True, True, False, True, True, False, False, False, False, True,
+     True, False, False, False, True, True, True, False, True, False, False, True, True, False, True, True, False, True,
+     True, False, False, False, False, False, False, False, False, True, False, True, True, True, True, False, True,
+     False, True, True, True, True, True, False, True, True, False, True, True, True, True, True, False, True, True,
+     True, False, True, True, True, True, True, False, False, True, True, True, True, False, True, True, True, False,
+     False, True, True, True, False, False, False, False, False, True, False, False, False, False, True, True, True,
+     False, False, False, False, False, True, False, True, False, False, True, True, False, False, True, True, False,
+     False, True, True, False, False, True, False, False, True, False, False, True, False, False, False, False, True,
+     True, True, True, False, False, False, True, True, False, True, True, False, False, True, True, True, True, True,
+     False, True, True, True, False, True, True, True, False, False, True, True, True, False, True, True, True, True,
+     True, True, True, True, True, False, True, False, False, True, True, True, True, True, True, True, True, True,
+     True, True, True, False, True, True, False, True, True, True, True, True, True, True, True, False, True, False,
+     True, False, False, True, False, True, True, True, False, True, False, True, True, False, True, True, True, True,
+     True, True, True, True, True, True, True, True, True, True, True, False, True, True, False, False, False, True,
+     True, False, True, True, False, False, True, False, True, True, True, True, True, False, True, True, False, True,
+     False, True, False, True, True, False, True, False, True, True, False, True, True, False, False, True, False, True,
+     True, True, True, True, False, True, False, True, False, True]
+
+
+    idx = 0
+    for x, y in activations1_projected:
+        if flags[idx] == True:
+            axes[1].scatter(x, y, color="red", marker="o", alpha=0.4)
+        else:
+            axes[1].scatter(x, y, color="blue", marker="o", alpha=0.4)
+        idx += 1
+
+
+    # Adding the legend
+    # scatter1 = plt.Line2D(
+    #     [0],
+    #     [0],
+    #     marker="o",
+    #     color="w",
+    #     markerfacecolor="blue",
+    #     markersize=10,
+    #     label=label1,
+    # )
+    # scatter2 = plt.Line2D(
+    #     [0],
+    #     [0],
+    #     marker="o",
+    #     color="w",
+    #     markerfacecolor="red",
+    #     markersize=10,
+    #     label=label2,
+    # )
+
+
+    # plt.legend(handles=[scatter1], loc='upper center', bbox_to_anchor=(0.47, 1.16), ncol=3)
+    plt.title(title)
+    plt.xlabel("t-SNE 1")
+    plt.ylabel("t-SNE 2")
     # plt.show()
     plt.savefig(fname)
+
 
 def extract_activations_for_vlguard(layer, activations_file="aa.json"):
     unsafe_activations = []
@@ -154,8 +259,8 @@ if __name__ == "__main__":
     if not os.path.exists(f"clustering/{save_path}"):
         os.mkdir(f"clustering/{save_path}")
 
-    start_layer = 0
-    end_layer = 31
+    start_layer = 8
+    end_layer = 10
     layers = list(range(start_layer, end_layer + 1))
 
     for layer in layers:
@@ -171,4 +276,5 @@ if __name__ == "__main__":
 
         fname = f"clustering/{save_path}/activations_layer_{layer}.png"
         title = f"t-SNE projected activations layer {layer}"
-        save_activation_projection_tsne_for_safebench(safebench_with_images, safebench_without_images, fname=fname, title=title)
+        # save_activation_projection_tsne_for_safebench(safebench_with_images, safebench_without_images, fname=fname, title=title)
+        save_activation_projection_tsne_for_safebench_only_oneset(safebench_without_images, fname=fname, title=title)
