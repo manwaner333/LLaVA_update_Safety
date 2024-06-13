@@ -460,7 +460,7 @@ if __name__ == "__main__":
             if args.add_activations == "True":
                 print("adjust activations.")
                 model_helper.reset_all()
-                vec = get_vec(layer, vectors_path)
+                vec = get_vec(layer, vectors_path).type(torch.float16)
                 model_helper.set_add_activations(layer, multiplier * vec.cuda())
             elif args.add_dot_products == "True":
                 print("adjust dot_products.")

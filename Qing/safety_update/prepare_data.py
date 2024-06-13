@@ -1,13 +1,15 @@
 import json
 import pandas as pd
 import os
-
+import numpy as np
+import torch
 
 prepare_vlguard_for_vectors = False
 prepare_vlguard_for_test = False
 prepare_vlguard_for_train = False
 prepare_safebench_for_test = False
-prepare_lm_for_vectors = True
+prepare_lm_for_vectors = False
+prepare_vectors_lm = True
 
 
 # if fil_vlguard_for_vectors:
@@ -172,6 +174,27 @@ if prepare_lm_for_vectors:
                 file.write('\n')
                 idx += 1
                 print(idx)
+
+
+if prepare_vectors_lm:
+    pos_activations_file = "playground/data/lm/llava-v1.5-7b_lm_pos_activations.json"
+    neg_activations_file = "playground/data/lm/llava-v1.5-7b_lm_neg_activations.json"
+    for layer in range(0, 32):
+        with open(pos_activations_file, "r") as f:
+            pos_data = []
+            for line in f:
+                pos_data.append(json.loads(line)['activations'][str(layer)][0])
+
+        with open(neg_activations_file, "r") as f:
+            neg_data = []
+            for line in f:
+                neg_data.append(json.loads(line)['activations'][str(layer)][0])
+
+        vec = torch.from_numpy(np.mean((np.array(pos_data) - np.array(neg_data)), axis=0))
+        torch.save(vec, f"vectors/llava-v1.5-7b_lm/vec_layer_{layer}.pt")
+        # a = 3
+
+
 
 
 # if fil_vlguard_for_vectors:
