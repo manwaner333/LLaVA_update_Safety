@@ -299,8 +299,8 @@ def generate_and_save_steering_vectors(model_helper, dataset, start_layer=0, end
                       }
             json.dump(output, file)
             file.write('\n')
-            # if idx > 30:
-            #     break
+            if idx > 20:
+                break
 
 
 

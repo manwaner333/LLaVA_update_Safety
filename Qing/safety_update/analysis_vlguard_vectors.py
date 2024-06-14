@@ -176,6 +176,7 @@ def save_activation_projection_tsne_for_vlguard(
     activations1_projected = projected_activations[0:len1, :]
     activations2_projected = projected_activations[len1:len1+len2, :]
     activations3_projected = projected_activations[len1+len2:len1+len2+len3, :]
+    print("len1+len2+len3:{}".format(len1+len2+len3))
 
     # Visualization
     for x, y in activations1_projected:
@@ -252,33 +253,13 @@ def extract_activations_for_vlguard(layer, activations_file="aa.json"):
     return unsafe_activations, safe_unsafe_activations, safe_safe_activations
 
 
-def extract_activations_for_safebench(layer, activations_file="aa.json"):
-    res = []
-
-    with open(activations_file, "r") as f:
-        for line in f:
-            item = json.loads(line)
-            idx = item['idx']
-            print(idx)
-            id = item['id']
-            image_file = item["image_file"]
-            safe = item["safe"]
-            harmful_category = item['harmful_category']
-            harmful_subcategory = item['harmful_subcategory']
-            prompt = item["prompt"]
-            activations_layer = item["activations"][str(layer)][0]
-            res.append(activations_layer)
-
-    qingli = 3
-    return res
-
-
-
 
 
 if __name__ == "__main__":
     # analysis activations
-    save_path = "llava_v1.6_vicuna_7b_vlguard_train_instructions"
+    # save_path = "llava_v1.6_vicuna_7b_vlguard_train_instructions"
+    # save_path = "llava_v1.5_7b_vlguard_train_instructions"
+    save_path = "aa"
     if not os.path.exists(f"clustering/{save_path}"):
         os.mkdir(f"clustering/{save_path}")
 
@@ -288,7 +269,9 @@ if __name__ == "__main__":
 
     for layer in layers:
         # vlguard
-        answers_vlguard_file = "playground/data/vlguard/llava_v1.6_vicuna_7b_train_filter_activations.json"
+        # answers_vlguard_file = "playground/data/vlguard/llava_v1.6_vicuna_7b_train_filter_activations.json"
+        # answers_vlguard_file = "playground/data/vlguard/llava_v1.5_7b_train_filter_activations.json"
+        answers_vlguard_file = "playground/data/vlguard/train_filter_activations.json"
         unsafe_activations, safe_unsafe_activations, safe_safe_activations = extract_activations_for_vlguard(layer, activations_file=answers_vlguard_file)
 
         fname = f"clustering/{save_path}/activations_layer_{layer}.png"

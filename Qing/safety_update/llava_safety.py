@@ -480,6 +480,7 @@ if __name__ == "__main__":
             # response_from_dataset = line['response_from_dataset']
             figure_size = figure_size_info[image_file][0]
             res = model_helper.generate_text(image_file, prompt, figure_size, max_new_tokens=max_new_tokens)
+            print(res)
             output = {"idx": idx,
                       'id': id,
                       "safe": safe,
@@ -493,8 +494,8 @@ if __name__ == "__main__":
             json.dump(output,  file)
             file.write('\n')
             count += 1
-            # if count > 300:
-            #     break
+            if count > 20:
+                break
     print("Final count is {}".format(count))
 
 

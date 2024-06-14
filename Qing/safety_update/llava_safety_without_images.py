@@ -379,8 +379,9 @@ class ModelHelper:
         input_ids = tokenizer_image_token(prompt, self.tokenizer, IMAGE_TOKEN_INDEX,
                                           return_tensors='pt').unsqueeze(0).to(self.model.device)
 
-        instr_pos = find_instruction_end_postion(input_ids[0], self.END_STR) + figure_size - 1
-        self.set_after_positions(instr_pos)
+        # 没有图片就去掉这两行
+        # instr_pos = find_instruction_end_postion(input_ids[0], self.END_STR) + figure_size - 1
+        # self.set_after_positions(instr_pos)
 
         stop_str = conv.sep if conv.sep_style != SeparatorStyle.TWO else conv.sep2
         keywords = [stop_str]
@@ -463,7 +464,7 @@ if __name__ == "__main__":
             if args.add_activations == "True":
                 print("adjust activations.")
                 model_helper.reset_all()
-                vec = get_vec(layer, vectors_path)
+                vec = get_vec(layer, vectors_path).type(torch.float16)
                 model_helper.set_add_activations(layer, multiplier * vec.cuda())
             elif args.add_dot_products == "True":
                 print("adjust dot_products.")
@@ -483,6 +484,7 @@ if __name__ == "__main__":
             # response_from_dataset = line['response_from_dataset']
             figure_size = figure_size_info[image_file][0]
             res = model_helper.generate_text(image_file, prompt, figure_size, max_new_tokens=max_new_tokens)
+            print(res)
             output = {"idx": idx,
                       'id': id,
                       "safe": safe,

@@ -26,6 +26,7 @@ from PIL import Image, ImageFilter
 from matplotlib import pyplot as plt
 from matplotlib.ticker import ScalarFormatter
 from sklearn.manifold import TSNE
+from sklearn.preprocessing import StandardScaler
 
 np.random.seed(42)
 torch.manual_seed(42)
@@ -59,10 +60,11 @@ class ComparisonDataset(Dataset):
     def __getitem__(self, idx):
         item = self.data[idx]
         image_file = item["image"]
-        question = item["prompt"]
+        pos_question = item["prompt"]
         pos_answer = item["safe_response"]
+        neg_question = item["prompt"]
         neg_answer = item["unsafe_response"]
-        noise_figure = args.noise_figure
+        noise_figure = False
 
         image = load_image(os.path.join(args.image_folder, image_file), noise_figure)
 
@@ -95,17 +97,20 @@ class ComparisonDataset(Dataset):
             roles = conv.roles
 
         if image is not None:
-            inp = DEFAULT_IMAGE_TOKEN + '\n' + question
-
-            conv.append_message(conv.roles[0], inp)
+            pos_inp = DEFAULT_IMAGE_TOKEN + '\n' + pos_question
+            neg_inp = DEFAULT_IMAGE_TOKEN + '\n' + neg_question
             image = None
 
+        conv.append_message(conv.roles[0], neg_inp)
         conv.append_message(conv.roles[1], neg_answer)
         neg_prompt = conv.get_prompt()
         neg_input_ids = tokenizer_image_token(neg_prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors='pt').unsqueeze(0).to(
             self.device)
 
         conv.remove_message(conv.roles[1], neg_answer)
+        conv.remove_message(conv.roles[0], neg_inp)
+
+        conv.append_message(conv.roles[0], pos_inp)
         conv.append_message(conv.roles[1], pos_answer)
         pos_prompt = conv.get_prompt()
         pos_input_ids = tokenizer_image_token(pos_prompt, self.tokenizer, IMAGE_TOKEN_INDEX, return_tensors='pt').unsqueeze(0).to(
@@ -354,9 +359,9 @@ def save_activation_projection_tsne(
     activations = torch.cat([activations1, activations2], dim=0)
     activations_np = activations.cpu().numpy()
 
-    # t-SNE transformation
+
     tsne = TSNE(n_components=2)
-    projected_activations = tsne.fit_transform(activations_np)
+    projected_activations = tsne.fit_transform(np.array(activations_np))
 
     # Splitting back into activations1 and activations2
     activations1_projected = projected_activations[: activations1.shape[0]]
@@ -396,8 +401,8 @@ def save_activation_projection_tsne(
     plt.savefig(fname)
 
 def plot_all_activations(layers, save_path="aa"):
-    if not os.path.exists(f"clustering/{save_path}"):
-        os.mkdir(f"clustering/{save_path}")
+    # if not os.path.exists(f"clustering/{save_path}"):
+    #     os.mkdir(f"clustering/{save_path}")
     for layer in layers:
         pos = torch.load(f"vectors/{save_path}/positive_layer_{layer}.pt")
         neg = torch.load(f"vectors/{save_path}/negative_layer_{layer}.pt")
@@ -481,11 +486,11 @@ if __name__ == "__main__":
     print(f"Using {len(dataset)} samples")
 
     save_path = args.model_path.split("/")[-1] + "_" + args.question_file.split("/")[-1].split(".")[0]
-
+    #
     start_layer = args.start_layer
     end_layer = args.end_layer
     generate_and_save_steering_vectors(model, dataset, start_layer=start_layer, end_layer=end_layer, save_path=save_path)
-    plot_all_activations(list(range(start_layer, end_layer + 1)), save_path=save_path)
+    # plot_all_activations(list(range(start_layer, end_layer + 1)), save_path=save_path)
 
 
 

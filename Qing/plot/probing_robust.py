@@ -62,8 +62,8 @@ ax.tick_params(axis='y', labelsize=20)
 ax.legend(loc='best', ncol=3, prop={'size': 14, 'weight': 'bold'})
 # Display the plot   bbox_to_anchor=(0.5, 1.13)
 plt.tight_layout()
-# plt.show()
+plt.show()
 
-fig.savefig("different_classifier_update.png", bbox_inches='tight', pad_inches=0.5)
+# fig.savefig("different_classifier_update.png", bbox_inches='tight', pad_inches=0.5)
 
 

@@ -229,7 +229,7 @@ def generate_and_save_steering_vectors(model_helper, dataset, start_layer=0, end
             safe = item["safe"]
             harmful_category = item['harmful_category']
             harmful_subcategory = item['harmful_subcategory']
-            prompt = item["question"]
+            prompt = item["prompt"]
 
             noise_figure = False
             image = load_image(os.path.join(args.image_folder, image_file), noise_figure)
