@@ -32,8 +32,8 @@ def eval_lvlm_defense(args):
     in_file = args.in_file
     out_file = args.out_file
 
-    if os.path.exists(out_file):
-        os.remove(out_file)
+    # if os.path.exists(out_file):
+    #     os.remove(out_file)
 
     if args.dataset in ["vlguard", "safebench"]:
         with open(out_file, 'w') as file:
@@ -96,7 +96,7 @@ if __name__ == '__main__':
     parser.add_argument("--task", type=str, default="lvlm_defense")
     parser.add_argument("--dataset", type=str, default="safebench")
     parser.add_argument("--sm", type=str, default="True")
-    parser.add_argument("--strong", type=str, default="True")
+    parser.add_argument("--strong", type=str, default="False")
     parser.add_argument("--ours", type=str, default="False")
     parser.add_argument("--debug", type=str, default="False")
 

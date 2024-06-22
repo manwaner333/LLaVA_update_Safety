@@ -135,7 +135,7 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model-path", type=str, default="liuhaotian/llava-v1.6-vicuna-7b")
+    parser.add_argument("--model-path", type=str, default="liuhaotian/llava-v1.5-7b")
     parser.add_argument("--model-base", type=str, default=None)
     parser.add_argument("--image-file", type=str, default="https://llava-vl.github.io/static/images/view.jpg") #
     parser.add_argument("--image-bin", type=str, default=None) # "trans_part_both_2885_best_prompt.bin" "facts_part_both_best_2954_prompt.bin"
