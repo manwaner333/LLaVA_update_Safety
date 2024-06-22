@@ -30,7 +30,7 @@ class MMDetect(Dataset):
             self.data = pickle.load(
                 open(os.path.join("Qing/data/", '_'.join([dataset, model, split]) + "_response.bin"), "rb"))
         print(len(self.data))
-        qingli = 3
+
     def __len__(self):
         return len(self.data)
 
@@ -56,7 +56,7 @@ class MMDetect_Train(Dataset):
             self.data = pickle.load(
                 open(os.path.join("Qing/data_clear_figure/", '_'.join([dataset, model, split]) + "_response.bin"), "rb"))
         print(len(self.data))
-        qingli = 3
+
     def __len__(self):
         return len(self.data)
 
