@@ -27,6 +27,7 @@ from matplotlib import pyplot as plt
 from matplotlib.ticker import ScalarFormatter
 from sklearn.manifold import TSNE
 from sklearn.decomposition import PCA
+import torch.nn.functional as F
 
 np.random.seed(42)
 torch.manual_seed(42)
@@ -38,13 +39,11 @@ def load_image(image_file, noise_figure):
     else:
         image = Image.open(image_file).convert('RGB')
 
-    if noise_figure:
+    if noise_figure == 'True':
         blurred_image = image.filter(ImageFilter.GaussianBlur(radius=10))
     else:
         blurred_image = image
     return blurred_image
-
-
 
 
 def add_vector_after_position(matrix, vector, position_ids, after=None):
@@ -53,6 +52,8 @@ def add_vector_after_position(matrix, vector, position_ids, after=None):
         after_id = position_ids.min().item() - 1
     mask = position_ids > after_id
     mask = mask.unsqueeze(-1)
+    if (position_ids > after_id).float().sum() > 1:
+        print("There are some problems about insert position!!!")
     matrix += mask.float() * vector
     return matrix
 
@@ -84,8 +85,6 @@ class BlockOutputWrapper(torch.nn.Module):
 
     def forward(self, *args, **kwargs):
         output = self.block(*args, **kwargs)
-        # print(output[0])
-        # print(output[0].shape)
         self.activations = output[0]
         if self.calc_dot_product_with is not None:
             last_token_activations = self.activations[0, -1, :]
@@ -129,10 +128,13 @@ class BlockOutputWrapper(torch.nn.Module):
     def reset(self):
         self.add_activations = None
         self.activations = None
+        self.block.self_attn.add_activations = None
         self.block.self_attn.activations = None
+        self.block.self_attn.head_activations = None
         self.after_position = None
         self.calc_dot_product_with = None
         self.dot_products = []
+
 
 
 class AttnWrapper(torch.nn.Module):
@@ -140,9 +142,17 @@ class AttnWrapper(torch.nn.Module):
         super().__init__()
         self.attn = attn
         self.activations = None
+        self.heads_activations = None
+        self.add_activations = None
 
     def forward(self, *args, **kwargs):
         output = self.attn(*args, **kwargs)
+        num_heads = self.attn.num_heads
+        head_dim = self.attn.head_dim
+        sequence_length = output[0].shape[1]
+        batch_size = output[0].shape[0]
+        output_view = output[0].view(batch_size, sequence_length, num_heads, head_dim)
+        self.heads_activations = output_view
         self.activations = output[0]
         return output
 
@@ -159,6 +169,7 @@ class ModelHelper:
             self.device
         )
         for i, layer in enumerate(self.model.model.layers):
+            print(f"layer:{i}")
             self.model.model.layers[i] = BlockOutputWrapper(
                 layer, self.model.lm_head, self.model.model.norm, self.tokenizer
             )
@@ -180,6 +191,12 @@ class ModelHelper:
 
     def get_last_activations(self, layer):
         return self.model.model.layers[layer].activations
+
+    def get_last_block_self_attn_activations(self, layer):
+        return self.model.model.layers[layer].block.self_attn.activations
+
+    def get_last_block_self_attn_heads_activations(self, layer):
+        return self.model.model.layers[layer].block.self_attn.heads_activations
 
     def set_add_activations(self, layer, activations):
         self.model.model.layers[layer].add(activations)
@@ -219,18 +236,19 @@ def generate_and_save_steering_vectors(model_helper, dataset, start_layer=0, end
         for item in dataset:
             token_idx = -2
             layers = list(range(start_layer, end_layer + 1))
-            activations = dict([(layer, []) for layer in layers])
+            activations = dict([(layer, []) for layer in layers])  # 存储的是每一层最后的值， 对应的hidden states, (batch_size, seq_len, embeding_dim)
+            block_self_attn_activations = dict([(layer, []) for layer in layers])   # 对应多头加上线性变换后的activations, (batch_size, seq_len, embeding_dim)
+            block_self_attn_heads_activations = dict([(layer, []) for layer in layers])  # 将block_self_attn_activations 拆分成多个head, (batch_size, seq_len, head_num, head_dim)
             idx = item['idx']
-            print(idx)
+            print(f"idx:{idx}")
             id = item['id']
             image_file = item["image"]
             safe = item["safe"]
             harmful_category = item['harmful_category']
             harmful_subcategory = item['harmful_subcategory']
-            prompt = item["prompt"]
-            response = item["response"]
+            prompt = item["question"]
 
-            noise_figure = False
+            noise_figure = args.noise_figure
             image = load_image(os.path.join(args.image_folder, image_file), noise_figure)
             image_size = image.size
             image_tensor = process_images([image], model_helper.image_processor, model_helper.model.config)
@@ -267,25 +285,38 @@ def generate_and_save_steering_vectors(model_helper, dataset, start_layer=0, end
             else:
                 roles = conv.roles
 
-            image = None
+            including_image = args.including_image
+            if including_image == "False":
+                image = None
+
             if image is not None:
                 inp = DEFAULT_IMAGE_TOKEN + '\n' + prompt
                 image = None
             else:
-                inp = prompt + '\n' + "ASSISTANT: " + response
+                inp = prompt
                 image = None
 
             conv.append_message(conv.roles[0], inp)
-            # conv.append_message(conv.roles[1], response)
             in_prompt = conv.get_prompt()
             input_ids = (tokenizer_image_token(in_prompt, model_helper.tokenizer, IMAGE_TOKEN_INDEX, return_tensors='pt').unsqueeze(0).to(model_helper.model.device))
-            # print(input_ids)
             model_helper.reset_all()
             model_helper.get_logits(input_ids, images=image_tensor, image_sizes=image_size)
+
             for layer in layers:
+                # whole layer
                 activations_all = model_helper.get_last_activations(layer)
                 activations_sub = activations_all[0, token_idx, :].detach().cpu().numpy().tolist()
+                # whole heads
+                block_self_attn_activations_all_tokens = model_helper.get_last_block_self_attn_activations(layer)
+                block_activations_sub_token = block_self_attn_activations_all_tokens[0, token_idx, :].detach().cpu().numpy().tolist()
+                # split different heads
+                block_head_attn_heads_activations_all_tokens = model_helper.get_last_block_self_attn_heads_activations(layer)
+                block_head_attn_heads_activations_sub_token = block_head_attn_heads_activations_all_tokens[0, token_idx, :, :].detach().cpu().numpy().tolist()
+                # store
                 activations[layer].append(activations_sub)
+                block_self_attn_activations[layer].append(block_activations_sub_token)
+                block_self_attn_heads_activations[layer].append(block_head_attn_heads_activations_sub_token)
+
 
             # save activations
             output = {"idx": idx,
@@ -295,12 +326,14 @@ def generate_and_save_steering_vectors(model_helper, dataset, start_layer=0, end
                       "harmful_subcategory": harmful_subcategory,
                       "image_file": image_file,
                       "prompt": prompt,
-                      "activations": activations,
+                      "activations": None,  # activations,
+                      "block_self_attn_heads_activations": block_self_attn_heads_activations
                       }
             json.dump(output, file)
             file.write('\n')
-            if idx > 20:
-                break
+
+            # if idx >= 1000:
+            #     break
 
 
 
@@ -322,17 +355,18 @@ if __name__ == "__main__":
     parser.add_argument("--top-k", type=int, default=None)  # 5 # there is no top-k before
     parser.add_argument("--num-beams", type=int, default=1)
     parser.add_argument("--max-new-tokens", type=int, default=1)
-    parser.add_argument("--noise-figure", type=bool, default=False)
+    parser.add_argument("--noise-figure", type=str, default="False")
     parser.add_argument("--load-8bit", action="store_true")
     parser.add_argument("--load-4bit", action="store_true")
     parser.add_argument("--device", type=str, default="cuda")
-    parser.add_argument("--add-activations", type=bool, default=False)
-    parser.add_argument("--add-dot-products", type=bool, default=False)
+    parser.add_argument("--add-activations", type=str, default="False")
+    parser.add_argument("--add-dot-products", type=str, default="False")
     parser.add_argument("--adj-layer", type=int, default=8)
     parser.add_argument("--multiplier", type=float, default=0.5)
     parser.add_argument("--figure-sizes-file", type=str, default="figure_sizes.jsonl")
     parser.add_argument("--start-layer", type=int, default=8)
     parser.add_argument("--end-layer", type=int, default=10)
+    parser.add_argument("--including-image", type=str, default="True")
 
     args = parser.parse_args()
 

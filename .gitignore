@@ -44,6 +44,12 @@ MMFC/*
 
 playground/*
 vectors/*
+
 clustering/*
+Qing/safety/*
+Qing/safety_explore_mllm/probing_old/*
+playground/data/gqa/*
+playground/data/self_data/*
+Qing/safety_update_1/*
 
 

@@ -3,13 +3,22 @@ import pandas as pd
 import os
 import numpy as np
 import torch
+import openai
+from openai import OpenAI
+
 
 prepare_vlguard_for_vectors = False
 prepare_vlguard_for_test = False
 prepare_vlguard_for_train = False
 prepare_safebench_for_test = False
 prepare_lm_for_vectors = False
-prepare_vectors_lm = True
+prepare_vectors_lm = False
+prepare_lmalpaca = False
+prepare_xstest = False
+prepare_figstep_alpaca_without = False
+prepare_figstep_vlguard_with = False
+test_openai = False
+prepare_vlguard_with = True
 
 
 # if fil_vlguard_for_vectors:
@@ -53,8 +62,8 @@ prepare_vectors_lm = True
 
 
 if prepare_vlguard_for_vectors:
-    data_file = "playground/data/vlguard/train.json"
-    filter_data_file = os.path.expanduser("playground/data/vlguard/train_filter_for_new_vector.json")
+    data_file = "playground/data/vlguard/test.json"
+    filter_data_file = os.path.expanduser("playground/data/vlguard/test_filter_for_new_vector.json")
     if os.path.exists(filter_data_file):
         os.remove(filter_data_file)
     idx = 0
@@ -148,8 +157,8 @@ if prepare_vlguard_for_train:
                     file.write('\n')
                     idx += 1
                     print(idx)
-                    # if idx > 20:
-                    #     break
+                    if idx > 20:
+                        break
 
 
 if prepare_lm_for_vectors:
@@ -339,4 +348,201 @@ if prepare_safebench_for_test:
             file.write('\n')
             idx += 1
             print(idx)
+
+
+
+if prepare_lmalpaca:
+    data_file = "playground/data/lm/refusal_data_A_B.json"
+    data_file2 = "playground/data/alpaca/ready_train_alpaca.json"
+    filter_data_file = os.path.expanduser("playground/data/lmalpaca/ready_lmalpaca_new.json")
+    if os.path.exists(filter_data_file):
+        os.remove(filter_data_file)
+
+    api_key = open(r"C:\Users\janga\openai_api.txt", "r").read().strip()
+    if api_key is None:
+        api_key = input("Please enter your OpenAI API key: ")
+    os.environ["OPENAI_API_KEY"] = api_key
+    client = OpenAI()
+
+    idx = 0
+    with open(filter_data_file, 'w') as file:
+        with open(data_file, "r") as f:
+            json_list = json.load(f)
+            for line in json_list:
+                id = idx
+                image = "query_ForbidQI_1_1_6.png"
+                question = line['question'].split('\n\n')[0]
+                json.dump({'idx': idx, 'id': id, 'image': image, "safe": 1,
+                           "harmful_category": None, "harmful_subcategory": None,
+                           'question': question, 'instruction': None}, file)  # safe 1 代表文本是有毒的
+                file.write('\n')
+                idx += 1
+        with open(data_file2, "r") as f2:
+            for item in f2:
+                line = json.loads(item)
+                id = idx
+                image = "query_ForbidQI_1_1_6.png"
+                question = line['prompt']
+
+                response = client.chat.completions.create(
+                    model="gpt-4",
+                    messages=[
+                        {"role": "system",
+                         "content": "You are an assistant that helps to convert statements into questions."},
+                        {"role": "user", "content": f"Convert the following statement into a question:\n\n{question}"}
+                    ],
+                )
+                gpt_res = response.choices[0].message.content
+                json.dump({'idx': idx, 'id': id, 'image': image, "safe": 0,
+                           "harmful_category": None, "harmful_subcategory": None,
+                           'question': gpt_res, 'instruction': question}, file)  # label 0 代表文本是没有毒的
+                file.write('\n')
+                idx += 1
+
+
+if prepare_xstest:
+    data_file = "playground/data/xstest/xstest_v2_prompts.csv"
+    new_data_file = os.path.expanduser("playground/data/xstest/ready_xstest.json")
+    if os.path.exists(new_data_file):
+        os.remove(new_data_file)
+    idx = 0
+    with open(new_data_file, 'w') as file:
+        df = pd.read_csv(data_file)
+        for index, row in df.iterrows():
+            type = row['type']
+            if type.startswith("contrast"):
+                safe = 1
+            else:
+                safe = 0
+            id = idx
+            image = "query_ForbidQI_1_1_6.png"
+            question = row["prompt"]
+            json.dump({'idx': idx, 'id': id, 'image': image, "safe": safe,
+                       "harmful_category": None, "harmful_subcategory": None,
+                       'question': question, 'response': None}, file)  # label 0 代表文本是没有毒的
+            file.write('\n')
+            idx += 1
+
+
+
+if prepare_figstep_alpaca_without:
+    data_file = "playground/data/safebench/ready_safebench.json"
+    data_file2 = "playground/data/alpaca/ready_test_alpaca.json"
+    filter_data_file = os.path.expanduser("playground/data/safebench_alpaca/ready_safebench_alpaca_new.json")
+    if os.path.exists(filter_data_file):
+        os.remove(filter_data_file)
+
+    api_key = open(r"C:\Users\janga\openai_api.txt", "r").read().strip()
+    if api_key is None:
+        api_key = input("Please enter your OpenAI API key: ")
+    os.environ["OPENAI_API_KEY"] = api_key
+    client = OpenAI()
+
+    idx = 0
+    with open(filter_data_file, 'w') as file:
+        with open(data_file, "r") as f:
+            for item in f:
+                line = json.loads(item)
+                id = idx
+                image = line['image']
+                question = line['question']
+                json.dump({'idx': idx, 'id': id, 'image': image, "safe": 1,
+                           "harmful_category": None, "harmful_subcategory": None,
+                           'question': question, 'instruction': None}, file)  # safe 1 代表文本是有毒的
+                file.write('\n')
+                idx += 1
+        with open(data_file2, "r") as f2:
+            for item in f2:
+                line = json.loads(item)
+                id = idx
+                image = "query_ForbidQI_1_1_6.png"
+                question = line['prompt']
+
+                response = client.chat.completions.create(
+                    model="gpt-4",
+                    messages=[
+                        {"role": "system",
+                         "content": "You are an assistant that helps to convert statements into questions."},
+                        {"role": "user", "content": f"Convert the following statement into a question:\n\n{question}"}
+                    ],
+                )
+                gpt_res = response.choices[0].message.content
+
+                json.dump({'idx': idx, 'id': id, 'image': image, "safe": 0,
+                           "harmful_category": None, "harmful_subcategory": None,
+                           'question': gpt_res, 'instruction': question}, file)  # label 0 代表文本是没有毒的
+                file.write('\n')
+                idx += 1
+
+
+
+if prepare_figstep_vlguard_with:
+    data_file = "playground/data/safebench/ready_safebench.json"
+    data_file2 = "playground/data/vlguard/test_filter_for_new_vector.json"
+    filter_data_file = os.path.expanduser("playground/data/safebench_vlguard/ready_safebench_vlguard.json")
+    if os.path.exists(filter_data_file):
+        os.remove(filter_data_file)
+
+    idx = 0
+    with open(filter_data_file, 'w') as file:
+        with open(data_file, "r") as f:
+            for item in f:
+                line = json.loads(item)
+                id = idx
+                image = line['image']
+                question = line['prompt']
+                json.dump({'idx': idx, 'id': id, 'image': image, "safe": 1,
+                           "harmful_category": None, "harmful_subcategory": None,
+                           'question': question, 'response': None}, file)  # safe 1 代表文本是有毒的
+                file.write('\n')
+                idx += 1
+        with open(data_file2, "r") as f2:
+            for item in f2:
+                line = json.loads(item)
+                id = idx
+                safe = line['safe']
+                if safe == "safe_safe":
+                    image = line['image']
+                    question = line['prompt']
+                    json.dump({'idx': idx, 'id': id, 'image': image, "safe": 0,
+                               "harmful_category": None, "harmful_subcategory": None,
+                               'question': question, 'response': None}, file)  # label 0 代表文本是没有毒的
+                    file.write('\n')
+                    idx += 1
+                else:
+                    continue
+                if idx > 1000:
+                    break
+
+
+if prepare_vlguard_with:
+    data_file = "playground/data/vlguard/test_filter_for_new_vector.json"
+    filter_data_file = os.path.expanduser("playground/data/vlguard/ready_test_vlguard.json")
+    if os.path.exists(filter_data_file):
+        os.remove(filter_data_file)
+
+    idx = 0
+    with open(filter_data_file, 'w') as file:
+        with open(data_file, "r") as f2:
+            for item in f2:
+                line = json.loads(item)
+                id = idx
+                safe = line['safe']
+                if safe == "safe_safe":
+                    image = line['image']
+                    question = line['prompt']
+                    json.dump({'idx': idx, 'id': id, 'image': image, "safe": 0,
+                               "harmful_category": None, "harmful_subcategory": None,
+                               'question': question, 'response': None}, file)  # label 0 代表文本是没有毒的
+                    file.write('\n')
+                    idx += 1
+                else:
+                    image = line['image']
+                    question = line['prompt']
+                    json.dump({'idx': idx, 'id': id, 'image': image, "safe": 1,
+                               "harmful_category": None, "harmful_subcategory": None,
+                               'question': question, 'response': None}, file)  # label 1 代表文本是有毒的
+                    file.write('\n')
+                    idx += 1
+
 

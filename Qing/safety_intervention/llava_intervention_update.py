@@ -81,11 +81,12 @@ def load_image(image_file, noise_figure):
     else:
         image = Image.open(image_file).convert('RGB')
 
-    if noise_figure:
+    if noise_figure == 'True':
         blurred_image = image.filter(ImageFilter.GaussianBlur(radius=10))
     else:
         blurred_image = image
     return blurred_image
+
 
 def add_vector_after_position(matrix, vector, position_ids, after=None):
     after_id = after
@@ -97,6 +98,7 @@ def add_vector_after_position(matrix, vector, position_ids, after=None):
         print("There are some problems about insert position!!!")
     matrix += mask.float() * vector
     return matrix
+
 
 def find_subtensor_position(tensor, sub_tensor):
     n, m = tensor.size(0), sub_tensor.size(0)
@@ -152,7 +154,7 @@ class BlockOutputWrapper(torch.nn.Module):
                 position_ids=kwargs["position_ids"],
                 after=self.after_position,
             )
-            output = (augmented_output + self.add_activations,) + output[1:]
+            output = (augmented_output + self.add_activations,) + output[1:]   # 这个地方有没有问题
 
         if not self.save_internal_decodings:
             return output
@@ -180,10 +182,15 @@ class BlockOutputWrapper(torch.nn.Module):
     def reset(self):
         self.add_activations = None
         self.activations = None
+        self.block.self_attn.add_activations = None
         self.block.self_attn.activations = None
+        self.block.self_attn.heads_activations = None
+        self.block.self_attn.add_heads_activations = None
+        self.block.self_attn.after_position = None
         self.after_position = None
         self.calc_dot_product_with = None
         self.dot_products = []
+
 
 
 class AttnWrapper(torch.nn.Module):
@@ -191,12 +198,33 @@ class AttnWrapper(torch.nn.Module):
         super().__init__()
         self.attn = attn
         self.activations = None
+        self.heads_activations = None
+        self.add_heads_activations = None
+        self.after_position = None
 
     def forward(self, *args, **kwargs):
         output = self.attn(*args, **kwargs)
-        self.activations = output[0]
+
+        if self.add_heads_activations is not None:
+            augmented_output = add_vector_after_position(
+                matrix=output[0],
+                vector=self.add_heads_activations,
+                position_ids=kwargs["position_ids"],
+                after=self.after_position,
+            )
+            output = (augmented_output + self.add_heads_activations,) + output[1:]   # 这个地方是不是有问题
+
+        # num_heads = self.attn.num_heads
+        # head_dim = self.attn.head_dim
+        # sequence_length = output[0].shape[1]
+        # batch_size = output[0].shape[0]
+        # output_view = output[0].view(batch_size, sequence_length, num_heads, head_dim)
+        # self.heads_activations = output_view
+        # self.activations = output[0]
         return output
 
+    def add_heads(self, activations):
+        self.add_heads_activations = activations  # 一层的activations都传过来
 
 class ModelHelper:
     def __init__(self, args):
@@ -211,6 +239,7 @@ class ModelHelper:
             self.device
         )
         for i, layer in enumerate(self.model.model.layers):
+            print(f"layer:{i}")
             self.model.model.layers[i] = BlockOutputWrapper(
                 layer, self.model.lm_head, self.model.model.norm, self.tokenizer
             )
@@ -222,19 +251,29 @@ class ModelHelper:
     def set_after_positions(self, pos):
         for layer in self.model.model.layers:
             layer.after_position = pos
+            layer.block.self_attn.after_position = pos
 
 
-    def get_logits(self, tokens):
+    def get_logits(self, tokens, images, image_sizes):
         with torch.no_grad():
-            logits = self.model(tokens).logits
+            outputs = self.model(tokens, images=images, image_sizes=[image_sizes])
+            logits = outputs['logits']
             return logits
 
     def get_last_activations(self, layer):
         return self.model.model.layers[layer].activations
 
+    def get_last_block_self_attn_activations(self, layer):
+        return self.model.model.layers[layer].block.self_attn.activations
+
+    def get_last_block_self_attn_heads_activations(self, layer):
+        return self.model.model.layers[layer].block.self_attn.heads_activations
+
     def set_add_activations(self, layer, activations):
         self.model.model.layers[layer].add(activations)
 
+    def set_add_heads_activations(self, layer, activations):
+        self.model.model.layers[layer].block.self_attn.add_heads(activations)
 
     def set_calc_dot_product_with(self, layer, vector):
         self.model.model.layers[layer].calc_dot_product_with = vector
@@ -249,73 +288,6 @@ class ModelHelper:
     def print_decoded_activations(self, decoded_activations, label, topk=10):
         data = self.get_activation_data(decoded_activations, topk)[0]
         print(label, data)
-
-    def decode_all_layers(
-        self,
-        tokens,
-        topk=10,
-        print_attn_mech=True,
-        print_intermediate_res=True,
-        print_mlp=True,
-        print_block=True,
-    ):
-        tokens = tokens.to(self.device)
-        self.get_logits(tokens)
-        for i, layer in enumerate(self.model.model.layers):
-            print(f"Layer {i}: Decoded intermediate outputs")
-            if print_attn_mech:
-                self.print_decoded_activations(
-                    layer.attn_out_unembedded, "Attention mechanism", topk=topk
-                )
-            if print_intermediate_res:
-                self.print_decoded_activations(
-                    layer.intermediate_resid_unembedded,
-                    "Intermediate residual stream",
-                    topk=topk,
-                )
-            if print_mlp:
-                self.print_decoded_activations(
-                    layer.mlp_out_unembedded, "MLP output", topk=topk
-                )
-            if print_block:
-                self.print_decoded_activations(
-                    layer.block_output_unembedded, "Block output", topk=topk
-                )
-
-    def plot_decoded_activations_for_layer(self, layer_number, tokens, topk=10):
-        tokens = tokens.to(self.device)
-        self.get_logits(tokens)
-        layer = self.model.model.layers[layer_number]
-
-        data = {}
-        data["Attention mechanism"] = self.get_activation_data(
-            layer.attn_out_unembedded, topk
-        )[1]
-        data["Intermediate residual stream"] = self.get_activation_data(
-            layer.intermediate_resid_unembedded, topk
-        )[1]
-        data["MLP output"] = self.get_activation_data(layer.mlp_out_unembedded, topk)[1]
-        data["Block output"] = self.get_activation_data(
-            layer.block_output_unembedded, topk
-        )[1]
-
-        # Plotting
-        fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(8, 6))
-        fig.suptitle(f"Layer {layer_number}: Decoded Intermediate Outputs", fontsize=21)
-
-        for ax, (mechanism, values) in zip(axes.flatten(), data.items()):
-            tokens, scores = zip(*values)
-            ax.barh(tokens, scores, color="skyblue")
-            ax.set_title(mechanism)
-            ax.set_xlabel("Value")
-            ax.set_ylabel("Token")
-
-            # Set scientific notation for x-axis labels when numbers are small
-            ax.xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
-            ax.ticklabel_format(style="sci", scilimits=(0, 0), axis="x")
-
-        plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-        plt.show()
 
     def get_activation_data(self, decoded_activations, topk=10):
         softmaxed = torch.nn.functional.softmax(decoded_activations[0][-1], dim=-1)
@@ -412,27 +384,33 @@ if __name__ == "__main__":
     parser.add_argument("--top-k", type=int, default=None)  # 5 # there is no top-k before
     parser.add_argument("--num-beams", type=int, default=1)
     parser.add_argument("--max-new-tokens", type=int, default=1)
-    parser.add_argument("--noise-figure", type=bool, default=False)
+    parser.add_argument("--noise-figure", type=str, default="False")
     parser.add_argument("--load-8bit", action="store_true")
     parser.add_argument("--load-4bit", action="store_true")
     parser.add_argument("--device", type=str, default="cuda")
-    parser.add_argument("--add-activations", type=str, default=None)
-    parser.add_argument("--add-dot-products", type=str, default=None)
-    parser.add_argument("--adj-layer", type=int, default=8)
+    parser.add_argument("--layer-level", type=str, default="False")
+    parser.add_argument("--head-level", type=str, default="False")
+    parser.add_argument("--adj-layers", nargs='+', type=int, help='A list of integers.')
+    parser.add_argument("--adj-heads", nargs='+', type=int, help='A list of integers.')
+    parser.add_argument("--add-activations", type=str, default="False")
+    parser.add_argument("--add-dot-products", type=str, default="False")
     parser.add_argument("--multiplier", type=float, default=0.5)
     parser.add_argument("--figure-sizes-file", type=str, default="figure_sizes.jsonl")
     parser.add_argument("--vectors-path", type=str, default=None)
+    parser.add_argument("--including-image", type=str, default="True")
 
     args = parser.parse_args()
 
     model_helper = ModelHelper(args)
 
-    print("model-path: {}; question-file: {}; image-folder: {}; adj-layer: {}; multiplier: {}; max-new-tokens: {}; "
+    print("model-path: {}; question-file: {}; image-folder: {}; adj-layers: {}; multiplier: {}; max-new-tokens: {}; "
           "add-activations: {}; add-dot-products: {}; answers-file: {}"
-          .format(args.model_path, args.question_file, args.image_folder, args.adj_layer, args.multiplier
+          .format(args.model_path, args.question_file, args.image_folder, args.adj_layers, args.multiplier
                   , args.max_new_tokens, args.add_activations, args.add_dot_products, args.answers_file))
 
-    layer = args.adj_layer
+
+    layers = args.adj_layers
+    heads = args.adj_heads
     multiplier = args.multiplier
     max_new_tokens = args.max_new_tokens
     vectors_path = args.vectors_path
@@ -460,8 +438,19 @@ if __name__ == "__main__":
             if args.add_activations == "True":
                 print("adjust activations.")
                 model_helper.reset_all()
-                vec = get_vec(layer, vectors_path).type(torch.float16)
-                model_helper.set_add_activations(layer, multiplier * vec.cuda())
+                if args.layer_level == "True":
+                    for layer in layers:
+                        vec = get_vec(layer, vectors_path).type(torch.float16)
+                        model_helper.set_add_activations(layer, multiplier * vec.cuda())
+                elif args.head_level == "True":
+                    for layer in layers:
+                        vec = get_vec(layer, vectors_path).type(torch.float16)
+                        head_dim = 128
+                        mask = torch.zeros(4096)
+                        for head in heads:
+                            mask[head*head_dim:(head+1)*head_dim] = 1.0
+                        mask_vec = (vec.cuda() * mask.cuda()).type(torch.float16)
+                        model_helper.set_add_heads_activations(layer, multiplier * mask_vec.cuda())
             elif args.add_dot_products == "True":
                 print("adjust dot_products.")
                 model_helper.reset_all()

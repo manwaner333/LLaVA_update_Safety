@@ -129,10 +129,13 @@ class BlockOutputWrapper(torch.nn.Module):
     def reset(self):
         self.add_activations = None
         self.activations = None
+        self.block.self_attn.add_activations = None
         self.block.self_attn.activations = None
+        self.block.self_attn.head_activations = None
         self.after_position = None
         self.calc_dot_product_with = None
         self.dot_products = []
+
 
 
 class AttnWrapper(torch.nn.Module):
@@ -140,9 +143,19 @@ class AttnWrapper(torch.nn.Module):
         super().__init__()
         self.attn = attn
         self.activations = None
+        self.heads_activations = None
+        self.add_activations = None
 
     def forward(self, *args, **kwargs):
         output = self.attn(*args, **kwargs)
+        num_heads = self.attn.num_heads
+        head_dim = self.attn.head_dim
+        sequence_length = output[0].shape[1]
+        batch_size = output[0].shape[0]
+        output_view = output[0].view(batch_size, sequence_length, num_heads, head_dim)
+        # for i in range(num_heads):
+        #     self.head_activations[i] = output_view[:, :, i, :]
+        self.heads_activations = output_view
         self.activations = output[0]
         return output
 
@@ -181,6 +194,12 @@ class ModelHelper:
     def get_last_activations(self, layer):
         return self.model.model.layers[layer].activations
 
+    def get_last_block_activations(self, layer):
+        return self.model.model.layers[layer].block.self_attn.activations
+
+    def get_last_block_heads_activations(self, layer):
+        return self.model.model.layers[layer].block.self_attn.heads_activations
+
     def set_add_activations(self, layer, activations):
         self.model.model.layers[layer].add(activations)
 
@@ -206,9 +225,6 @@ class ModelHelper:
         return list(zip(tokens, probs_percent)), list(zip(tokens, values.tolist()))
 
 
-
-
-
 def generate_and_save_steering_vectors(model_helper, dataset, start_layer=0, end_layer=32):
     model_name = model_helper.model_name
     model_helper.set_save_internal_decodings(False)
@@ -222,14 +238,16 @@ def generate_and_save_steering_vectors(model_helper, dataset, start_layer=0, end
             token_idx = -2
             layers = list(range(start_layer, end_layer + 1))
             activations = dict([(layer, []) for layer in layers])
+            block_activations = dict([(layer, []) for layer in layers])
+            block_head_activations = dict([(layer, []) for layer in layers])
             idx = item['idx']
-            print(idx)
+            print(f"idx:{idx}")
             id = item['id']
             image_file = item["image"]
             safe = item["safe"]
             harmful_category = item['harmful_category']
             harmful_subcategory = item['harmful_subcategory']
-            prompt = item["prompt"]
+            prompt = item["question"]
 
             noise_figure = False
             image = load_image(os.path.join(args.image_folder, image_file), noise_figure)
@@ -287,6 +305,15 @@ def generate_and_save_steering_vectors(model_helper, dataset, start_layer=0, end
                 activations_sub = activations_all[0, token_idx, :].detach().cpu().numpy().tolist()
                 activations[layer].append(activations_sub)
 
+            for layer in layers:
+                block_activations_all = model_helper.get_last_block_activations(layer)
+                block_activations_sub = block_activations_all[0, token_idx, :].detach().cpu().numpy().tolist()
+                block_head_activations_all = model_helper.get_last_block_heads_activations(layer)
+                block_head_activations_sub = block_head_activations_all[0, token_idx, :, :].detach().cpu().numpy().tolist()
+                block_activations[layer].append(block_activations_sub)
+                block_head_activations[layer].append(block_head_activations_sub)
+
+
             # save activations
             output = {"idx": idx,
                       'id': id,
@@ -295,11 +322,13 @@ def generate_and_save_steering_vectors(model_helper, dataset, start_layer=0, end
                       "harmful_subcategory": harmful_subcategory,
                       "image_file": image_file,
                       "prompt": prompt,
-                      "activations": activations,
+                      "activations": None,  # activations,
+                      "block_activations": block_head_activations
                       }
             json.dump(output, file)
             file.write('\n')
-            # if idx > 30:
+
+            # if idx >= 30:
             #     break
 
 
