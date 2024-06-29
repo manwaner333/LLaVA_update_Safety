@@ -153,7 +153,9 @@ class BlockOutputWrapper(torch.nn.Module):
                 position_ids=kwargs["position_ids"],
                 after=self.after_position,
             )
-            output = (augmented_output + self.add_activations,) + output[1:]
+            # output = (augmented_output + self.add_activations,) + output[1:]
+            output = (augmented_output,) + output[1:]
+
 
         if not self.save_internal_decodings:
             return output
@@ -277,7 +279,7 @@ class ModelHelper:
 
 
     def generate_text(self, image_file, prompt, figure_size, max_new_tokens=50):
-        noise_figure = False
+        noise_figure = "False"
         image = load_image(os.path.join(args.image_folder, image_file), noise_figure)
         image_size = image.size
         image_tensor = process_images([image], self.image_processor, self.model.config)
@@ -382,13 +384,16 @@ if __name__ == "__main__":
 
     model_helper = ModelHelper(args)
 
-    print("model-path: {}; question-file: {}; image-folder: {}; adj-layers: {}; multiplier: {}; max-new-tokens: {}; "
-          "add-activations: {}; add-dot-products: {}; answers-file: {}"
-          .format(args.model_path, args.question_file, args.image_folder, args.adj_layers, args.multiplier
-                  , args.max_new_tokens, args.add_activations, args.add_dot_products, args.answers_file))
+    print("model-path: {}; question-file: {}; image-folder: {}; answers-file: {}; max-new-tokens: {}; "
+          "add-activations: {}; add-dot-products: {}; layer-level: {}; head-level: {}; adj-layers: {};"
+          "adj-heads: {}; multiplier: {}; vectors-path: {}; including-image: {}"
+          .format(args.model_path, args.question_file, args.image_folder, args.answers_file
+                  , args.max_new_tokens, args.add_activations, args.add_dot_products, args.layer_level
+                  , args.head_level, args.adj_layers, args.adj_heads, args.multiplier, args.vectors_path
+                  , args.including_image))
 
 
-    layers = args.adj_layers
+    layer = args.adj_layers[0]
     heads = args.adj_heads
     multiplier = args.multiplier
     max_new_tokens = args.max_new_tokens
@@ -417,12 +422,8 @@ if __name__ == "__main__":
             if args.add_activations == "True":
                 print("adjust activations.")
                 model_helper.reset_all()
-                if args.layer_level:
-                    vec = get_vec(layer, vectors_path).type(torch.float16)
-                    model_helper.set_add_activations(layer, multiplier * vec.cuda())
-                elif args.head_level:
-                    a = 3
-                # layer and head
+                vec = get_vec(layer, vectors_path).type(torch.float16)
+                model_helper.set_add_activations(layer, multiplier * vec.cuda())
             elif args.add_dot_products == "True":
                 print("adjust dot_products.")
                 model_helper.reset_all()

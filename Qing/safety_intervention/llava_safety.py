@@ -212,6 +212,7 @@ class ModelHelper:
             self.device
         )
         for i, layer in enumerate(self.model.model.layers):
+            print(f"layer:{i}")
             self.model.model.layers[i] = BlockOutputWrapper(
                 layer, self.model.lm_head, self.model.model.norm, self.tokenizer
             )

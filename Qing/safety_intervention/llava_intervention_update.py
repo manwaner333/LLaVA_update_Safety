@@ -147,6 +147,7 @@ class BlockOutputWrapper(torch.nn.Module):
             top_token = self.tokenizer.decode(top_token_id)
             dot_product = torch.dot(last_token_activations, self.calc_dot_product_with)
             self.dot_products.append((top_token, dot_product.cpu().item()))
+
         if self.add_activations is not None:
             augmented_output = add_vector_after_position(
                 matrix=output[0],
@@ -154,7 +155,8 @@ class BlockOutputWrapper(torch.nn.Module):
                 position_ids=kwargs["position_ids"],
                 after=self.after_position,
             )
-            output = (augmented_output + self.add_activations,) + output[1:]   # 这个地方有没有问题
+            # output = (augmented_output + self.add_activations,) + output[1:]   # 这个地方有没有问题
+            output = (augmented_output,) + output[1:]
 
         if not self.save_internal_decodings:
             return output
@@ -212,7 +214,8 @@ class AttnWrapper(torch.nn.Module):
                 position_ids=kwargs["position_ids"],
                 after=self.after_position,
             )
-            output = (augmented_output + self.add_heads_activations,) + output[1:]   # 这个地方是不是有问题
+            # output = (augmented_output + self.add_heads_activations,) + output[1:]   # 这个地方是不是有问题
+            output = (augmented_output,) + output[1:]
 
         # num_heads = self.attn.num_heads
         # head_dim = self.attn.head_dim
@@ -298,7 +301,7 @@ class ModelHelper:
 
 
     def generate_text(self, image_file, prompt, figure_size, max_new_tokens=50):
-        noise_figure = False
+        noise_figure = args.noise_figure
         image = load_image(os.path.join(args.image_folder, image_file), noise_figure)
         image_size = image.size
         image_tensor = process_images([image], self.image_processor, self.model.config)
@@ -403,10 +406,13 @@ if __name__ == "__main__":
 
     model_helper = ModelHelper(args)
 
-    print("model-path: {}; question-file: {}; image-folder: {}; adj-layers: {}; multiplier: {}; max-new-tokens: {}; "
-          "add-activations: {}; add-dot-products: {}; answers-file: {}"
-          .format(args.model_path, args.question_file, args.image_folder, args.adj_layers, args.multiplier
-                  , args.max_new_tokens, args.add_activations, args.add_dot_products, args.answers_file))
+    print("model-path: {}; question-file: {}; image-folder: {}; answers-file: {}; max-new-tokens: {}; "
+          "add-activations: {}; add-dot-products: {}; layer-level: {}; head-level: {}; adj-layers: {};"
+          "adj-heads: {}; multiplier: {}; vectors-path: {}; including-image: {}"
+          .format(args.model_path, args.question_file, args.image_folder, args.answers_file
+                  , args.max_new_tokens, args.add_activations, args.add_dot_products, args.layer_level
+                  , args.head_level, args.adj_layers, args.adj_heads, args.multiplier, args.vectors_path
+                  , args.including_image))
 
 
     layers = args.adj_layers
@@ -456,7 +462,6 @@ if __name__ == "__main__":
                 model_helper.reset_all()
                 vec = get_vec(layer, vectors_path)
                 model_helper.set_calc_dot_product_with(layer, vec.cuda())
-
             idx = line['idx']
             id = line['id']
             safe = line['safe']

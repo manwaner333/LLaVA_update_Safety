@@ -9,7 +9,7 @@ from openai import OpenAI
 
 prepare_vlguard_for_vectors = False
 prepare_vlguard_for_test = False
-prepare_vlguard_for_train = False
+prepare_vlguard_for_train = True
 prepare_safebench_for_test = False
 prepare_lm_for_vectors = False
 prepare_vectors_lm = False
@@ -18,7 +18,7 @@ prepare_xstest = False
 prepare_figstep_alpaca_without = False
 prepare_figstep_vlguard_with = False
 test_openai = False
-prepare_vlguard_with = True
+prepare_vlguard_with = False
 
 
 # if fil_vlguard_for_vectors:
@@ -137,15 +137,15 @@ if prepare_vlguard_for_train:
                                'prompt': unsafe_instruction, 'response': unsafe_response}, file)
                     file.write('\n')
                     idx += 1
-                    harmful_category = None
-                    harmful_subcategory = None
-                    safe_instruction = instr_resp[0]['safe_instruction']
-                    safe_response = instr_resp[0]['response']
-                    json.dump({'idx': idx, 'id': id, 'image': image, "safe": "safe_safe", "harmful_category": harmful_category,
-                               "harmful_subcategory": harmful_subcategory,
-                               'prompt': safe_instruction, 'response': safe_response}, file)
-                    file.write('\n')
-                    idx += 1
+                    # harmful_category = None
+                    # harmful_subcategory = None
+                    # safe_instruction = instr_resp[0]['safe_instruction']
+                    # safe_response = instr_resp[0]['response']
+                    # json.dump({'idx': idx, 'id': id, 'image': image, "safe": "safe_safe", "harmful_category": harmful_category,
+                    #            "harmful_subcategory": harmful_subcategory,
+                    #            'prompt': safe_instruction, 'response': safe_response}, file)
+                    # file.write('\n')
+                    # idx += 1
                 else:
                     harmful_category = line['harmful_category']
                     harmful_subcategory = line['harmful_subcategory']
@@ -157,8 +157,8 @@ if prepare_vlguard_for_train:
                     file.write('\n')
                     idx += 1
                     print(idx)
-                    if idx > 20:
-                        break
+                    # if idx > 20:
+                    #     break
 
 
 if prepare_lm_for_vectors:

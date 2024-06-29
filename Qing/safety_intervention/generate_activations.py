@@ -326,7 +326,7 @@ def generate_and_save_steering_vectors(model_helper, dataset, start_layer=0, end
                       "harmful_subcategory": harmful_subcategory,
                       "image_file": image_file,
                       "prompt": prompt,
-                      "activations": None,  # activations,
+                      "activations": activations,  # activations,
                       "block_self_attn_heads_activations": block_self_attn_heads_activations
                       }
             json.dump(output, file)
