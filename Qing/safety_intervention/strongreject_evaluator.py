@@ -57,7 +57,7 @@ def autograde_response(question: str, response: str) -> AutograderResponse:
         The response from the autograder.
     """
 
-    with open("Qing/safety_update/strongreject_evaluator_prompt.txt", "r") as f:
+    with open("Qing/safety_intervention/strongreject_evaluator_prompt.txt", "r") as f:
         autograder_prompt = f.read()
 
     model_input = autograder_prompt.format(prompt=question, response=response)

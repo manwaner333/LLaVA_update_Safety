@@ -51,11 +51,16 @@ def plot_3_heatmap(data1, data2, data3):
 
 def plot_heatmap(data):
     plt.figure(figsize=(12, 8))
-    sns.heatmap(data, vmin=0, vmax=1, cmap='YlGnBu', fmt='.2f', cbar_kws={'orientation': 'horizontal'})  # annot=True,
+    sns.heatmap(data, vmin=0.45, vmax=1, cmap='YlGnBu', fmt='.2f', cbar_kws={'orientation': 'horizontal'})  # annot=True,
     # plt.title('示例热力图')
     plt.xlabel('Head')
     plt.ylabel('Layer')
+
+    # 调整布局
+    plt.tight_layout()
+
     plt.show()
+    # plt.savefig('images/heatmap_pos_neg_cases_regression.png', bbox_inches='tight')
 
 
 
@@ -68,17 +73,21 @@ if __name__ == "__main__":
     # file_path3 = "result/safebench_vlguard/llava_v1.5_7b_probe_layer_head_new.json"
 
     #case 2
-    file_path1 = "result/safebenchalpaca_xstest/llava_v1.5_7b_probe_layer_head_new_new.json"
-    file_path2 = "result/lmalpaca/llava_v1.5_7b_probe_layer_head_on_safebenalpacaxtest.json"
-    file_path3 = "result/safebench_vlguard/llava_v1.5_7b_probe_layer_head_on_safebenalpacaxtest.json"
-    # file_path3 = "result/vlguard/llava_v1.5_7b_probe_layer_head_on_safebenalpacaxtest.json"
+    # file_path1 = "result/safebenchalpaca_xstest/llava_v1.5_7b_probe_layer_head_new_new.json"
+    # file_path2 = "result/lmalpaca/llava_v1.5_7b_probe_layer_head_on_safebenalpacaxtest.json"
+    # file_path3 = "result/safebench_vlguard/llava_v1.5_7b_probe_layer_head_on_safebenalpacaxtest.json"
+    # # file_path3 = "result/vlguard/llava_v1.5_7b_probe_layer_head_on_safebenalpacaxtest.json"
+    #
+    # data1 = get_data(file_path1)
+    # data2 = get_data(file_path2)
+    # data3 = get_data(file_path3)
+    #
+    # plot_3_heatmap(data1, data2, data3)
 
-    data1 = get_data(file_path1)
-    data2 = get_data(file_path2)
-    data3 = get_data(file_path3)
-
-    plot_3_heatmap(data1, data2, data3)
-    # plot_heatmap(data1)
+    # 画出利用positive 和 negative cases 得到的激活值， 来进行的probe
+    data_path = "result/vlguard/llava_v1.5_7b_probe_layer_head_on_pos_nes_cases.json"
+    data = get_data(data_path)
+    plot_heatmap(data)
 
 
 

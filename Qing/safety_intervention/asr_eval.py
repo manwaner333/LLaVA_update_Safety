@@ -75,7 +75,7 @@ def eval_lvlm_defense(args):
                               "prompt": prompt,
                               "response": res,
                               "sm_score": sm_score,
-                              "strong_score": strong_score
+                              "strong_score": None,  # strong_score
                               }
                     json.dump(output, file)
                     file.write('\n')
@@ -85,14 +85,44 @@ def eval_lvlm_defense(args):
                     print(f"String Match ASR: {sum(attack_sm_ll)/len(attack_sm_ll)}")
                     print(attack_sm_ll)
 
-                elif args.strong == "True":
+                if args.strong == "True":
                     print(f"StrongReject Score:{sum(attack_strong_ll)/len(attack_strong_ll)}")
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--in_file', type=str, default="result/safebench/llava-v1.5-7b_safebench_origin_model.json")
-    parser.add_argument('--out_file', type=str, default="result/safebench/llava-v1.5-7b_safebench_origin_model_annocated.json")
+    # safebench
+    # parser.add_argument('--in_file', type=str, default="result/safebench/llava-v1.5-7b_safebench_origin_model.json")
+    # parser.add_argument('--out_file', type=str, default="result/safebench/llava-v1.5-7b_safebench_origin_model_annocated.json")
+    # parser.add_argument('--in_file', type=str, default="result/safebench/llava_v1.5_7b_safebench_multiplier_1.5_layer.json")
+    # parser.add_argument('--out_file', type=str, default="result/safebench/llava_v1.5_7b_safebench_multiplier_1.5_layer_annocated.json")
+    # parser.add_argument('--in_file', type=str, default="result/safebench/llava_v1.5_7b_safebench_multiplier_5.0_head.json")
+    # parser.add_argument('--out_file', type=str, default="result/safebench/llava_v1.5_7b_safebench_multiplier_5.0_head_annocated.json")
+
+    # vlguard_su
+    # parser.add_argument('--in_file', type=str, default="result/vlguard/llava_v1.5_7b_vlguard_test_su_origin_model.json")
+    # parser.add_argument('--out_file', type=str, default="result/vlguard/llava_v1.5_7b_vlguard_test_su_origin_model_annocated.json")
+    # parser.add_argument('--in_file', type=str, default="result/vlguard/llava_v1.5_7b_vlguard_test_su_multiplier_1.5_layer.json")
+    # parser.add_argument('--out_file', type=str, default="result/vlguard/llava_v1.5_7b_vlguard_test_su_multiplier_1.5_layer_annocated.json")
+    # parser.add_argument('--in_file', type=str, default="result/vlguard/llava_v1.5_7b_vlguard_test_su_multiplier_5.0_head.json")
+    # parser.add_argument('--out_file', type=str, default="result/vlguard/llava_v1.5_7b_vlguard_test_su_multiplier_5.0_head_annocated.json")
+
+    # vlguard_u
+    # parser.add_argument('--in_file', type=str, default="result/vlguard/llava_v1.5_7b_vlguard_test_u_origin_model.json")
+    # parser.add_argument('--out_file', type=str, default="result/vlguard/llava_v1.5_7b_vlguard_test_u_origin_model_annocated.json")
+    # parser.add_argument('--in_file', type=str, default="result/vlguard/llava_v1.5_7b_vlguard_test_u_multiplier_1.5_layer.json")
+    # parser.add_argument('--out_file', type=str, default="result/vlguard/llava_v1.5_7b_vlguard_test_u_multiplier_1.5_layer_annocated.json")
+    # parser.add_argument('--in_file', type=str, default="result/vlguard/llava_v1.5_7b_vlguard_test_u_multiplier_5.0_head.json")
+    # parser.add_argument('--out_file', type=str, default="result/vlguard/llava_v1.5_7b_vlguard_test_u_multiplier_5.0_head_annocated.json")
+
+    # vlguard_ss
+    # parser.add_argument('--in_file', type=str, default="result/vlguard/llava_v1.5_7b_vlguard_test_ss_origin_model.json")
+    # parser.add_argument('--out_file', type=str, default="result/vlguard/llava_v1.5_7b_vlguard_test_ss_origin_model_annocated.json")
+    # parser.add_argument('--in_file', type=str, default="result/vlguard/llava_v1.5_7b_vlguard_test_ss_multiplier_1.5_layer.json")
+    # parser.add_argument('--out_file', type=str, default="result/vlguard/llava_v1.5_7b_vlguard_test_ss_multiplier_1.5_layer_annocated.json")
+    parser.add_argument('--in_file', type=str, default="result/vlguard/llava_v1.5_7b_vlguard_test_ss_multiplier_5.0_head.json")
+    parser.add_argument('--out_file', type=str, default="result/vlguard/llava_v1.5_7b_vlguard_test_ss_multiplier_5.0_head_annocated.json")
+
     parser.add_argument("--task", type=str, default="lvlm_defense")
     parser.add_argument("--dataset", type=str, default="safebench")
     parser.add_argument("--sm", type=str, default="True")

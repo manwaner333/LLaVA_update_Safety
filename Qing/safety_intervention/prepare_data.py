@@ -5,11 +5,11 @@ import numpy as np
 import torch
 import openai
 from openai import OpenAI
-
+from datasets import load_dataset
 
 prepare_vlguard_for_vectors = False
 prepare_vlguard_for_test = False
-prepare_vlguard_for_train = True
+prepare_vlguard_for_train = False
 prepare_safebench_for_test = False
 prepare_lm_for_vectors = False
 prepare_vectors_lm = False
@@ -19,6 +19,10 @@ prepare_figstep_alpaca_without = False
 prepare_figstep_vlguard_with = False
 test_openai = False
 prepare_vlguard_with = False
+prepare_vlguard_test_su = False
+prepare_vlguard_test_u = False
+prepare_vlguard_test_ss = False
+prepare_scienceqa = True
 
 
 # if fil_vlguard_for_vectors:
@@ -546,3 +550,98 @@ if prepare_vlguard_with:
                     idx += 1
 
 
+if prepare_vlguard_test_su:
+    data_file = "playground/data/vlguard/test.json"
+    filter_data_file = os.path.expanduser("playground/data/vlguard/ready_vlguard_test_su.json")
+    if os.path.exists(filter_data_file):
+        os.remove(filter_data_file)
+    idx = 0
+    with open(filter_data_file, 'w') as file:
+        with open(data_file, "r") as f:
+            json_list = json.load(f)
+            for line in json_list:
+                id = line['id']
+                image = line['image']
+                safe = line['safe']
+                instr_resp = line['instr-resp']
+                if safe:
+                    harmful_category = None
+                    harmful_subcategory = None
+                    unsafe_instruction = instr_resp[1]['unsafe_instruction']
+                    unsafe_response = instr_resp[1]['response']
+                    json.dump({'idx': idx, 'id': id, 'image': image, "safe": "safe_unsafe",
+                               "harmful_category": harmful_category,
+                               "harmful_subcategory": harmful_subcategory,
+                               'prompt': unsafe_instruction, 'response': unsafe_response}, file)
+                    file.write('\n')
+                    idx += 1
+
+
+
+if prepare_vlguard_test_ss:
+    data_file = "playground/data/vlguard/test.json"
+    filter_data_file = os.path.expanduser("playground/data/vlguard/ready_vlguard_test_ss.json")
+    if os.path.exists(filter_data_file):
+        os.remove(filter_data_file)
+    idx = 0
+    with open(filter_data_file, 'w') as file:
+        with open(data_file, "r") as f:
+            json_list = json.load(f)
+            for line in json_list:
+                id = line['id']
+                image = line['image']
+                safe = line['safe']
+                instr_resp = line['instr-resp']
+                if safe:
+                    harmful_category = None
+                    harmful_subcategory = None
+                    safe_instruction = instr_resp[0]['safe_instruction']
+                    safe_response = instr_resp[0]['response']
+                    json.dump({'idx': idx, 'id': id, 'image': image, "safe": "safe_safe",
+                               "harmful_category": harmful_category,
+                               "harmful_subcategory": harmful_subcategory,
+                               'prompt': safe_instruction, 'response': safe_response}, file)
+                    file.write('\n')
+                    idx += 1
+
+
+if prepare_vlguard_test_u:
+    data_file = "playground/data/vlguard/test.json"
+    filter_data_file = os.path.expanduser("playground/data/vlguard/ready_vlguard_test_u.json")
+    if os.path.exists(filter_data_file):
+        os.remove(filter_data_file)
+    idx = 0
+    with open(filter_data_file, 'w') as file:
+        with open(data_file, "r") as f:
+            json_list = json.load(f)
+            for line in json_list:
+                id = line['id']
+                image = line['image']
+                safe = line['safe']
+                instr_resp = line['instr-resp']
+                if not safe:
+                    harmful_category = line['harmful_category']
+                    harmful_subcategory = line['harmful_subcategory']
+                    instruction = instr_resp[0]['instruction']
+                    response = instr_resp[0]['response']
+                    json.dump({'idx': idx, 'id': id, 'image': image, "safe": "unsafe",
+                               "harmful_category": harmful_category, "harmful_subcategory": harmful_subcategory,
+                               'prompt': instruction, 'response': response}, file)
+                    file.write('\n')
+                    idx += 1
+
+
+if prepare_scienceqa:
+    file_path = 'playground/data/science_qa/science_qa.parquet'
+    df = pd.read_parquet(file_path)
+    qingli = 3
+    # 加载 ScienceQA 数据集
+    # dataset = load_dataset("derek-thomas/ScienceQA")
+    # test_data = dataset['test']
+    # for example in test_data:
+    #     image = example['image']
+    #     question = example['question']
+    #     answer = example['answer']
+    #     choices = example['choices']
+    #     # explanation = example['explanation']
+    #     qingli = 3
