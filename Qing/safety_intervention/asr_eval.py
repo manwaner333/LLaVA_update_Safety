@@ -91,6 +91,7 @@ def eval_lvlm_defense(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    # mass mean shift
     # safebench
     # parser.add_argument('--in_file', type=str, default="result/safebench/llava-v1.5-7b_safebench_origin_model.json")
     # parser.add_argument('--out_file', type=str, default="result/safebench/llava-v1.5-7b_safebench_origin_model_annocated.json")
@@ -120,8 +121,65 @@ if __name__ == '__main__':
     # parser.add_argument('--out_file', type=str, default="result/vlguard/llava_v1.5_7b_vlguard_test_ss_origin_model_annocated.json")
     # parser.add_argument('--in_file', type=str, default="result/vlguard/llava_v1.5_7b_vlguard_test_ss_multiplier_1.5_layer.json")
     # parser.add_argument('--out_file', type=str, default="result/vlguard/llava_v1.5_7b_vlguard_test_ss_multiplier_1.5_layer_annocated.json")
-    parser.add_argument('--in_file', type=str, default="result/vlguard/llava_v1.5_7b_vlguard_test_ss_multiplier_5.0_head.json")
-    parser.add_argument('--out_file', type=str, default="result/vlguard/llava_v1.5_7b_vlguard_test_ss_multiplier_5.0_head_annocated.json")
+    # parser.add_argument('--in_file', type=str, default="result/vlguard/llava_v1.5_7b_vlguard_test_ss_multiplier_5.0_head.json")
+    # parser.add_argument('--out_file', type=str, default="result/vlguard/llava_v1.5_7b_vlguard_test_ss_multiplier_5.0_head_annocated.json")
+
+    # probe weight direction
+    # safebench
+    # parser.add_argument('--in_file', type=str, default="result/safebench/llava_v1.5_7b_safebench_multiplier_3.0_layer_from_probe_weight_direction.json")
+    # parser.add_argument('--out_file', type=str, default="result/safebench/llava_v1.5_7b_safebench_multiplier_3.0_layer_from_probe_weight_direction_annocated.json")
+    # parser.add_argument('--in_file', type=str, default="result/safebench/llava_v1.5_7b_safebench_multiplier_7.0_head_from_probe_weight_direction.json")
+    # parser.add_argument('--out_file', type=str, default="result/safebench/llava_v1.5_7b_safebench_multiplier_7.0_head_from_probe_weight_direction_annocated.json")
+
+    # vlguard_su
+    # parser.add_argument('--in_file', type=str, default="result/vlguard/llava_v1.5_7b_vlguard_test_su_multiplier_3.0_layer_from_probe_weight_direction.json")
+    # parser.add_argument('--out_file', type=str, default="result/vlguard/llava_v1.5_7b_vlguard_test_su_multiplier_3.0_layer_from_probe_weight_direction_annocated.json")
+    # parser.add_argument('--in_file', type=str, default="result/vlguard/llava_v1.5_7b_vlguard_test_su_multiplier_7.0_head_from_probe_weight_direction.json")
+    # parser.add_argument('--out_file', type=str, default="result/vlguard/llava_v1.5_7b_vlguard_test_su_multiplier_7.0_head_from_probe_weight_direction_annocated.json")
+
+    # vlguard_u
+    # parser.add_argument('--in_file', type=str, default="result/vlguard/llava_v1.5_7b_vlguard_test_u_multiplier_3.0_layer_from_probe_weight_direction.json")
+    # parser.add_argument('--out_file', type=str, default="result/vlguard/llava_v1.5_7b_vlguard_test_u_multiplier_3.0_layer_from_probe_weight_direction_annocated.json")
+    # parser.add_argument('--in_file', type=str, default="result/vlguard/llava_v1.5_7b_vlguard_test_u_multiplier_7.0_head_from_probe_weight_direction.json")
+    # parser.add_argument('--out_file', type=str, default="result/vlguard/llava_v1.5_7b_vlguard_test_u_multiplier_7.0_head_from_probe_weight_direction_annocated.json")
+
+    # vlguard_ss
+    # parser.add_argument('--in_file', type=str, default="result/vlguard/llava_v1.5_7b_vlguard_test_ss_multiplier_3.0_layer_from_probe_weight_direction.json")
+    # parser.add_argument('--out_file', type=str, default="result/vlguard/llava_v1.5_7b_vlguard_test_ss_multiplier_3.0_layer_from_probe_weight_direction_annocated.json")
+    # parser.add_argument('--in_file', type=str, default="result/vlguard/llava_v1.5_7b_vlguard_test_ss_multiplier_7.0_head_from_probe_weight_direction.json")
+    # parser.add_argument('--out_file', type=str, default="result/vlguard/llava_v1.5_7b_vlguard_test_ss_multiplier_7.0_head_from_probe_weight_direction_annocated.json")
+
+    # safebench  13b
+    parser.add_argument('--in_file', type=str, default="result/safebench/llava_v1.5_13b_safebench_multiplier_1.5_layer.json")
+    parser.add_argument('--out_file', type=str, default="result/safebench/llava_v1.5_13b_safebench_multiplier_1.5_layer_annocated.json")
+    # parser.add_argument('--in_file', type=str, default="result/safebench/llava_v1.5_13b_safebench_multiplier_1.5_layer.json")
+    # parser.add_argument('--out_file', type=str, default="result/safebench/llava_v1.5_13b_safebench_multiplier_1.5_layer_annocated.json")
+    # parser.add_argument('--in_file', type=str, default="result/safebench/llava_v1.5_13b_safebench_multiplier_5.0_head.json")
+    # parser.add_argument('--out_file', type=str, default="result/safebench/llava_v1.5_13b_safebench_multiplier_5.0_head_annocated.json")
+
+    # vlguard_su  13b
+    # parser.add_argument('--in_file', type=str, default="result/vlguard/llava_v1.5_13b_vlguard_test_su_origin_model.json")
+    # parser.add_argument('--out_file', type=str, default="result/vlguard/llava_v1.5_13b_vlguard_test_su_origin_model_annocated.json")
+    # parser.add_argument('--in_file', type=str, default="result/vlguard/llava_v1.5_13b_vlguard_test_su_multiplier_1.5_layer.json")
+    # parser.add_argument('--out_file', type=str, default="result/vlguard/llava_v1.5_13b_vlguard_test_su_multiplier_1.5_layer_annocated.json")
+    # parser.add_argument('--in_file', type=str, default="result/vlguard/llava_v1.5_13b_vlguard_test_su_multiplier_5.0_head.json")
+    # parser.add_argument('--out_file', type=str, default="result/vlguard/llava_v1.5_13b_vlguard_test_su_multiplier_5.0_head_annocated.json")
+
+    # vlguard_u  13b
+    # parser.add_argument('--in_file', type=str, default="result/vlguard/llava_v1.5_13b_vlguard_test_u_origin_model.json")
+    # parser.add_argument('--out_file', type=str, default="result/vlguard/llava_v1.5_13b_vlguard_test_u_origin_model_annocated.json")
+    # parser.add_argument('--in_file', type=str, default="result/vlguard/llava_v1.5_13b_vlguard_test_u_multiplier_1.5_layer.json")
+    # parser.add_argument('--out_file', type=str, default="result/vlguard/llava_v1.5_13b_vlguard_test_u_multiplier_1.5_layer_annocated.json")
+    # parser.add_argument('--in_file', type=str, default="result/vlguard/llava_v1.5_13b_vlguard_test_u_multiplier_5.0_head.json")
+    # parser.add_argument('--out_file', type=str, default="result/vlguard/llava_v1.5_13b_vlguard_test_u_multiplier_5.0_head_annocated.json")
+
+    # vlguard_ss  13b
+    # parser.add_argument('--in_file', type=str, default="result/vlguard/llava_v1.5_13b_vlguard_test_ss_origin_model.json")
+    # parser.add_argument('--out_file', type=str, default="result/vlguard/llava_v1.5_13b_vlguard_test_ss_origin_model_annocated.json")
+    # parser.add_argument('--in_file', type=str, default="result/vlguard/llava_v1.5_13b_vlguard_test_ss_multiplier_1.5_layer.json")
+    # parser.add_argument('--out_file', type=str, default="result/vlguard/llava_v1.5_13b_vlguard_test_ss_multiplier_1.5_layer_annocated.json")
+    # parser.add_argument('--in_file', type=str, default="result/vlguard/llava_v1.5_13b_vlguard_test_ss_multiplier_5.0_head.json")
+    # parser.add_argument('--out_file', type=str, default="result/vlguard/llava_v1.5_13b_vlguard_test_ss_multiplier_5.0_head_annocated.json")
 
     parser.add_argument("--task", type=str, default="lvlm_defense")
     parser.add_argument("--dataset", type=str, default="safebench")
@@ -131,12 +189,11 @@ if __name__ == '__main__':
     parser.add_argument("--debug", type=str, default="False")
 
     args = parser.parse_args()
-    # api_key = open("apikey", "r").read().strip()
-    api_key = open(r"C:\Users\Administrator\openai_api.txt", "r").read().strip()
-    print(api_key)
-    if api_key is None:
-        api_key = input("Please enter your OpenAI API key: ")
-    os.environ["OPENAI_API_KEY"] = api_key
+    # api_key = open(r"C:\Users\Administrator\openai_api.txt", "r").read().strip()
+    # print(api_key)
+    # if api_key is None:
+    #     api_key = input("Please enter your OpenAI API key: ")
+    # os.environ["OPENAI_API_KEY"] = api_key
 
     if args.task == "lvlm_defense":
         eval_lvlm_defense(args)
