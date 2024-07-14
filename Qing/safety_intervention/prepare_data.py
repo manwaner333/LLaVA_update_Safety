@@ -632,9 +632,38 @@ if prepare_vlguard_test_u:
 
 
 if prepare_scienceqa:
-    file_path = 'playground/data/science_qa/science_qa.parquet'
-    df = pd.read_parquet(file_path)
-    qingli = 3
+    output_path = 'playground/data/science_qa/ready_science_qa.json'
+    data_path = 'playground/data/science_qa/problems.json'
+    idx = 0
+    id = 0
+    with open(output_path, 'w') as file:
+        with open(data_path, "r") as f:
+            json_list = json.load(f)
+            for key, value in json_list.items():
+                split = value['split']
+                print(split)
+                if split == 'val' and value['image']:
+                    image = key + '/' + value['image']
+                    question = value['question']
+                    choices = value['choices']
+                    answer = choices[value['answer']]
+                    safe = "safe"
+                    harmful_category = None
+                    harmful_subcategory = None
+                    prompt = f"Question: {question} \n Choices:{choices} \n  Please choose the correct answer from the choices and label it as 'Answer'."
+                    answer_number = value['answer']
+
+                    json.dump({'idx': idx, 'id': id, 'image': image, "safe": safe,
+                               "harmful_category": harmful_category, "harmful_subcategory": harmful_subcategory,
+                               'prompt': prompt, 'answer': answer, 'answer_number': answer_number}, file)
+                    file.write('\n')
+                    idx += 1
+                    id += 1
+
+                    # if idx > 500:
+                    #     break
+
+    # df = pd.read_parquet(file_path)
     # 加载 ScienceQA 数据集
     # dataset = load_dataset("derek-thomas/ScienceQA")
     # test_data = dataset['test']
