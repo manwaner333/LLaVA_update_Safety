@@ -25,7 +25,6 @@ output
 *.png
 data/*
 result/*
-Qing/data_old/*
 checkpoints
 ckpts*
 
@@ -37,19 +36,9 @@ ckpts*
 
 # Demo
 serve_images/
-Qing/code_old/*
-Qing/data/*
-Qing/data_clear_figure/*
 MMFC/*
-
-playground/*
 vectors/*
-
 clustering/*
-Qing/safety/*
-Qing/safety_explore_mllm/probing_old/*
-playground/data/gqa/*
-playground/data/self_data/*
-Qing/safety_update_1/*
-Qing/safety_intervention/factcrescendo.py
+
+
 
